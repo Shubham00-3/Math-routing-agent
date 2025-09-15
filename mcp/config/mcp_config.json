@@ -1,0 +1,6 @@
+{
+  "servers": [
+    { "name": "search", "entry": "mcp/servers/search_server.py" },
+    { "name": "math_tools", "entry": "mcp/servers/math_tools_server.py" }
+  ]
+}
