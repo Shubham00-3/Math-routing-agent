@@ -1,0 +1,42 @@
+{
+  "name": "math-routing-agent-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "next": "14.2.5",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "typescript": "5.5.4",
+    "@types/react": "18.3.3",
+    "@types/react-dom": "18.3.0",
+    "tailwindcss": "3.4.6",
+    "autoprefixer": "10.4.19",
+    "postcss": "8.4.39",
+    "lucide-react": "0.408.0",
+    "socket.io-client": "4.7.5",
+    "react-hook-form": "7.52.1",
+    "zod": "3.23.8",
+    "@hookform/resolvers": "3.7.0",
+    "react-query": "3.39.3",
+    "axios": "1.7.2",
+    "katex": "0.16.11",
+    "react-katex": "3.0.1",
+    "framer-motion": "11.3.8",
+    "react-hot-toast": "2.4.1",
+    "recharts": "2.12.7",
+    "date-fns": "3.6.0"
+  },
+  "devDependencies": {
+    "@types/katex": "0.16.7",
+    "@types/node": "20.14.12",
+    "eslint": "8.57.0",
+    "eslint-config-next": "14.2.5"
+  }
+}
