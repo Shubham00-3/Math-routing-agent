@@ -6,7 +6,7 @@ pydantic-settings==2.1.0
 langchain==0.0.340
 langgraph==0.0.60
 langchain-openai==0.0.5
-langchain-anthropic==0.0.11
+langchain-anthropic==0.1.23
 qdrant-client==1.7.0
 redis==5.0.1
 psycopg2-binary==2.9.9
