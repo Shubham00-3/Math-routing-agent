@@ -6,7 +6,7 @@ from qdrant_client.models import (
     VectorParams, Distance, PointStruct, Filter, FieldCondition, 
     MatchValue, SearchRequest, CollectionInfo
 )
-from langchain.embeddings import OpenAIEmbeddings
+from langchain_community.embeddings import OpenAIEmbeddings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 import numpy as np
 from datetime import datetime

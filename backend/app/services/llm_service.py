@@ -1,10 +1,12 @@
 import logging
 from typing import List, Dict, Any, Optional, Union
-from langchain.llms import OpenAI
-from langchain.chat_models import ChatOpenAI, ChatAnthropic
+from langchain_community.llms import OpenAI
+# from langchain.chat_models import ChatOpenAI, ChatAnthropic
 from langchain.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate
 from langchain.schema import BaseMessage, SystemMessage, HumanMessage, AIMessage
-from langchain.callbacks import AsyncCallbackHandler
+from langchain.callbacks.streaming_aiter import AsyncIteratorCallbackHandler
+import pandas as pd
+
 import asyncio
 import time
 import json
@@ -14,7 +16,7 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
-class LLMCallbackHandler(AsyncCallbackHandler):
+class LLMCallbackHandler(AsyncIteratorCallbackHandler):
     """Async callback handler for LLM operations"""
     
     def __init__(self):
