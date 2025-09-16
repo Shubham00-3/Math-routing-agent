@@ -4,11 +4,11 @@ databases:
   - name: postgres-db
     plan: free
 
-caches:
-  - name: redis-cache
+services:
+  - type: redis
+    name: redis-cache
     plan: free
 
-services:
   - type: web
     name: math-agent-backend
     env: docker
