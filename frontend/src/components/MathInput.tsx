@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -37,12 +37,6 @@ export const MathInput: React.FC<MathInputProps> = ({ onSubmit, isLoading, class
     onSubmit(data);
   };
 
-  const exampleQuestions = [
-    "Solve the quadratic equation x² + 5x + 6 = 0",
-    "Find the derivative of f(x) = 3x² + 2x - 1",
-    "Calculate the area of a circle with radius 5 units",
-  ];
-
   return (
     <div className={`bg-white rounded-xl shadow-lg p-6 ${className}`}>
       <div className="flex items-center gap-3 mb-6">
@@ -73,26 +67,7 @@ export const MathInput: React.FC<MathInputProps> = ({ onSubmit, isLoading, class
           )}
         </div>
 
-        {!questionValue && (
-          <div className="bg-gray-50 rounded-lg p-4">
-            <p className="text-sm font-medium text-gray-700 mb-2">Try these examples:</p>
-            <div className="space-y-2">
-              {exampleQuestions.map((example, index) => (
-                <button
-                  key={index}
-                  type="button"
-                  onClick={() => {
-                    const event = { target: { name: 'question', value: example } };
-                    register('question').onChange(event);
-                  }}
-                  className="block text-left text-sm text-blue-600 hover:text-blue-800 hover:bg-blue-50 p-2 rounded transition-colors w-full"
-                >
-                  {example}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
+        {/* The "Try these examples" block has been removed from here */}
 
         <motion.button
           type="submit"

@@ -5,7 +5,7 @@ import { Feedback } from '../types';
 
 interface FeedbackPanelProps {
   solutionId: string;
-  onSubmit: (feedback: Feedback) => void;
+  onSubmit: (feedback: any) => void; // Use 'any' to match the backend schema for now
   isSubmitting: boolean;
   className?: string;
 }
@@ -24,10 +24,14 @@ export const FeedbackPanel: React.FC<FeedbackPanelProps> = ({
   const handleQuickFeedback = (type: 'good' | 'bad') => {
     setQuickRating(type);
     
-    const feedback: Feedback = {
+    // Construct a valid feedback object matching the backend schema
+    const feedback = {
       solution_id: solutionId,
-      feedback_type: 'overall',
+      feedback_type: 'helpfulness',
       rating: type === 'good' ? 5 : 2,
+      correctness: type === 'good', // Assume 'good' means correct
+      clarity: type === 'good' ? 5 : 2,
+      helpfulness: type === 'good' ? 5 : 2,
       comments: type === 'good' ? 'Helpful solution!' : 'Needs improvement',
     };
     
@@ -35,10 +39,14 @@ export const FeedbackPanel: React.FC<FeedbackPanelProps> = ({
   };
 
   const handleDetailedSubmit = () => {
-    const feedback: Feedback = {
+    // Construct a valid feedback object matching the backend schema
+    const feedback = {
       solution_id: solutionId,
-      feedback_type: 'overall',
+      feedback_type: 'helpfulness', // Set a valid default type
       rating,
+      correctness: rating > 3, // Infer correctness from the rating
+      clarity: rating,
+      helpfulness: rating,
       comments: comments.trim() || undefined,
     };
     

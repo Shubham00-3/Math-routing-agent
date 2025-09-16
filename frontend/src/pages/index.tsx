@@ -22,8 +22,6 @@ const queryClient = new QueryClient({
 });
 
 const MathApp: React.FC = () => {
-  const [isConnected, setIsConnected] = useState(false);
-
   const {
     solution,
     isLoading,
@@ -38,14 +36,9 @@ const MathApp: React.FC = () => {
   // Initialize WebSocket connection
   useEffect(() => {
     websocketService.connect();
-    setIsConnected(websocketService.isSocketConnected());
-
-    const checkConnection = setInterval(() => {
-      setIsConnected(websocketService.isSocketConnected());
-    }, 1000);
+    // No need to set isConnected state anymore
 
     return () => {
-      clearInterval(checkConnection);
       websocketService.disconnect();
     };
   }, []);
@@ -91,14 +84,7 @@ const MathApp: React.FC = () => {
                 </p>
               </div>
             </div>
-
-            {/* Connection Status */}
-            <div className="flex items-center gap-2">
-              <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400' : 'bg-red-400'}`} />
-              <span className="text-xs text-gray-500">
-                {isConnected ? 'Connected' : 'Disconnected'}
-              </span>
-            </div>
+            {/* The Connection Status has been removed from here */}
           </div>
         </div>
       </header>
