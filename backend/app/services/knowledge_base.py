@@ -6,7 +6,7 @@ from qdrant_client.models import (
     VectorParams, Distance, PointStruct, Filter, FieldCondition, 
     MatchValue, SearchRequest, CollectionInfo
 )
-from langchain_community.embeddings import OpenAIEmbeddings
+from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 import numpy as np
 from datetime import datetime
@@ -27,10 +27,10 @@ class KnowledgeBaseService:
             host=settings.QDRANT_HOST,
             port=settings.QDRANT_PORT
         )
-        self.embeddings = OpenAIEmbeddings(
-            openai_api_key=settings.OPENAI_API_KEY,
-            model="text-embedding-3-large",  # Latest OpenAI embedding model
-            dimensions=1536
+        self.embeddings = HuggingFaceEmbeddings(
+            model_name="all-MiniLM-L6-v2",  # Fast, good quality, free
+            model_kwargs={'device': 'cpu'},  # Use CPU (or 'cuda' if you have GPU)
+            encode_kwargs={'normalize_embeddings': True}
         )
         self.collection_name = settings.QDRANT_COLLECTION_NAME
         self.text_splitter = RecursiveCharacterTextSplitter(
@@ -51,7 +51,7 @@ class KnowledgeBaseService:
                 self.client.create_collection(
                     collection_name=self.collection_name,
                     vectors_config=VectorParams(
-                        size=1536,  # OpenAI embedding dimension
+                        size=384,  # Changed from 1536 to 384 for all-MiniLM-L6-v2
                         distance=Distance.COSINE
                     )
                 )
@@ -286,7 +286,7 @@ class KnowledgeBaseService:
         except Exception as e:
             logger.error(f"Error generating embedding: {str(e)}")
             # Return zero vector as fallback
-            return [0.0] * 1536
+            return [0.0] * 384
 
     async def _point_to_knowledge_entry(self, point) -> KnowledgeEntry:
         """Convert Qdrant point to KnowledgeEntry object"""

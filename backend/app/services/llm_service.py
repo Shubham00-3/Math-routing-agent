@@ -1,15 +1,19 @@
 import logging
+import re
 from typing import List, Dict, Any, Optional, Union
-from langchain_community.llms import OpenAI
-# from langchain.chat_models import ChatOpenAI, ChatAnthropic
-from langchain.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate
-from langchain.schema import BaseMessage, SystemMessage, HumanMessage, AIMessage
-from langchain.callbacks.streaming_aiter import AsyncIteratorCallbackHandler
 import pandas as pd
-
 import asyncio
 import time
 import json
+import uuid
+from datetime import datetime
+
+# Updated imports for Groq/Gemini support
+from langchain_groq import ChatGroq
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate
+from langchain.schema import BaseMessage, SystemMessage, HumanMessage, AIMessage
+from langchain.callbacks.streaming_aiter import AsyncIteratorCallbackHandler
 
 from app.models.schemas import SolutionResponse, Step, QuestionType, SourceType
 from app.core.config import settings
@@ -38,29 +42,34 @@ class MathLLMService:
     def __init__(self):
         self.callback_handler = LLMCallbackHandler()
         
-        # Initialize LLM based on configuration
-        if settings.LLM_MODEL.startswith("gpt"):
-            self.llm = ChatOpenAI(
-                model_name=settings.LLM_MODEL,
+        # Initialize LLM based on your configuration
+        if settings.LLM_PROVIDER == "groq":
+            self.llm = ChatGroq(
+                model=settings.LLM_MODEL.replace("groq/", ""),  # Remove groq/ prefix
                 temperature=settings.LLM_TEMPERATURE,
                 max_tokens=settings.MAX_TOKENS,
-                openai_api_key=settings.OPENAI_API_KEY,
+                groq_api_key=settings.GROQ_API_KEY,
                 callbacks=[self.callback_handler]
             )
-        elif settings.LLM_MODEL.startswith("claude"):
-            self.llm = ChatAnthropic(
-                model=settings.LLM_MODEL,
+            logger.info(f"Initialized Groq LLM: {settings.LLM_MODEL}")
+            
+        elif settings.LLM_PROVIDER == "gemini":
+            self.llm = ChatGoogleGenerativeAI(
+                model="gemini-pro",
                 temperature=settings.LLM_TEMPERATURE,
                 max_tokens=settings.MAX_TOKENS,
-                anthropic_api_key=settings.ANTHROPIC_API_KEY,
+                google_api_key=settings.GOOGLE_API_KEY,
                 callbacks=[self.callback_handler]
             )
+            logger.info("Initialized Gemini LLM")
+            
         else:
-            raise ValueError(f"Unsupported LLM model: {settings.LLM_MODEL}")
-        
+            logger.warning(f"Unsupported LLM provider: {settings.LLM_PROVIDER}")
+            self.llm = None
+            
         # System prompts for different scenarios
         self.system_prompts = self._create_system_prompts()
-    
+
     def _create_system_prompts(self) -> Dict[str, str]:
         """Create system prompts for different scenarios"""
         return {
@@ -143,12 +152,22 @@ Be honest about limitations and suggest verification methods if needed."""
                 "subject": subject.value if subject else "general mathematics"
             }
             
-            # Generate response
+            # Generate response using LLM
+            if self.llm is None:
+                return self._create_error_solution(question, "LLM not initialized", source_type, subject)
+            
             messages = prompt_template.format_prompt(**prompt_inputs).to_messages()
-            response = await self.llm.agenerate([messages])
+            
+            # Use invoke instead of agenerate for newer langchain versions
+            try:
+                response = await self.llm.ainvoke(messages)
+                solution_text = response.content
+            except AttributeError:
+                # Fallback for older versions
+                response = self.llm.invoke(messages)
+                solution_text = response.content
             
             # Parse response into structured solution
-            solution_text = response.generations[0][0].text
             parsed_solution = await self._parse_solution_response(
                 solution_text, question, source_type, subject
             )
@@ -209,23 +228,22 @@ EDUCATIONAL NOTES: [Additional tips, common mistakes to avoid, or related concep
                 return f"""
 KNOWLEDGE BASE SOLUTION:
 Question: {kb_data.get('question', '')}
-Steps: {self._format_steps(kb_data.get('steps', []))}
 Answer: {kb_data.get('final_answer', '')}
 Confidence: {kb_data.get('confidence_score', 0.0)}
 """
             
         elif source_type == SourceType.WEB_SEARCH:
             search_results = context_data.get("search_results", [])
-            formatted_results = []
-            for i, result in enumerate(search_results[:3], 1):
-                formatted_results.append(f"""
+            if search_results:
+                formatted_results = []
+                for i, result in enumerate(search_results[:3], 1):
+                    formatted_results.append(f"""
 SEARCH RESULT {i}:
-Title: {result.get('title', '')}
-Source: {result.get('url', '')}
-Content: {result.get('content', '')[:500]}...
-Relevance: {result.get('relevance_score', 0.0)}
+Title: {result.title}
+Content: {result.content[:500]}...
+Relevance: {result.relevance_score}
 """)
-            return "\n".join(formatted_results)
+                return "\n".join(formatted_results)
             
         elif source_type == SourceType.HYBRID:
             kb_context = self._format_context(context_data, SourceType.KNOWLEDGE_BASE)
@@ -233,22 +251,6 @@ Relevance: {result.get('relevance_score', 0.0)}
             return f"{kb_context}\n\n{search_context}"
             
         return "No additional context provided."
-
-    def _format_steps(self, steps: List[Dict]) -> str:
-        """Format solution steps for context"""
-        if not steps:
-            return "No steps provided"
-        
-        formatted_steps = []
-        for step in steps:
-            step_text = f"Step {step.get('step_number', '')}: {step.get('description', '')}"
-            if step.get('explanation'):
-                step_text += f"\nExplanation: {step.get('explanation')}"
-            if step.get('formula'):
-                step_text += f"\nFormula: {step.get('formula')}"
-            formatted_steps.append(step_text)
-        
-        return "\n\n".join(formatted_steps)
 
     async def _parse_solution_response(
         self,
@@ -266,7 +268,6 @@ Relevance: {result.get('relevance_score', 0.0)}
             
             # Split response into sections
             sections = solution_text.split('\n\n')
-            current_step = None
             
             for section in sections:
                 section = section.strip()
@@ -277,6 +278,7 @@ Relevance: {result.get('relevance_score', 0.0)}
                     step_line = lines[0]
                     
                     # Extract step number and description
+                    import re
                     step_match = re.search(r'Step\s+(\d+):\s*(.+)', step_line, re.IGNORECASE)
                     if step_match:
                         step_num = int(step_match.group(1))
@@ -304,19 +306,33 @@ Relevance: {result.get('relevance_score', 0.0)}
                 
                 elif section.upper().startswith('CONFIDENCE'):
                     try:
+                        import re
                         conf_text = section[10:].strip()
-                        confidence_score = float(re.search(r'(\d+\.?\d*)', conf_text).group(1))
-                        if confidence_score > 1.0:
-                            confidence_score = confidence_score / 100.0
+                        conf_match = re.search(r'(\d+\.?\d*)', conf_text)
+                        if conf_match:
+                            confidence_score = float(conf_match.group(1))
+                            if confidence_score > 1.0:
+                                confidence_score = confidence_score / 100.0
                     except:
                         confidence_score = 0.8
                 
                 elif section.upper().startswith('EDUCATIONAL NOTES'):
                     educational_notes = section[17:].strip()
             
-            # Determine subject if not provided
-            if not subject:
-                subject = await self._determine_subject(question)
+            # Create fallback if no proper steps found
+            if not steps:
+                steps = [
+                    Step(
+                        step_number=1,
+                        description="Analyze the mathematical problem",
+                        explanation=solution_text[:200] + "..." if len(solution_text) > 200 else solution_text,
+                        formula=None,
+                        visual_aid=None
+                    )
+                ]
+            
+            if not final_answer:
+                final_answer = "Please see the solution steps above for the complete answer."
             
             # Create solution response
             solution = SolutionResponse(
@@ -327,7 +343,7 @@ Relevance: {result.get('relevance_score', 0.0)}
                 confidence_score=min(max(confidence_score, 0.0), 1.0),
                 source=source_type,
                 subject=subject or QuestionType.ALGEBRA,
-                difficulty_level=await self._estimate_difficulty(question, steps),
+                difficulty_level=5,  # Default difficulty
                 processing_time=0.0,  # Will be set by caller
                 references=[],
                 created_at=datetime.utcnow()
@@ -338,54 +354,6 @@ Relevance: {result.get('relevance_score', 0.0)}
         except Exception as e:
             logger.error(f"Error parsing solution response: {str(e)}")
             return self._create_error_solution(question, str(e), source_type, subject)
-
-    async def _determine_subject(self, question: str) -> QuestionType:
-        """Determine mathematical subject from question"""
-        question_lower = question.lower()
-        
-        subject_keywords = {
-            QuestionType.ALGEBRA: ["equation", "variable", "solve", "polynomial", "factor", "quadratic", "linear"],
-            QuestionType.CALCULUS: ["derivative", "integral", "limit", "differentiate", "integrate", "dx", "dy"],
-            QuestionType.GEOMETRY: ["triangle", "circle", "area", "perimeter", "angle", "polygon", "theorem"],
-            QuestionType.TRIGONOMETRY: ["sin", "cos", "tan", "sine", "cosine", "tangent", "radian"],
-            QuestionType.STATISTICS: ["mean", "median", "mode", "probability", "distribution", "variance"],
-            QuestionType.LINEAR_ALGEBRA: ["matrix", "vector", "determinant", "eigenvalue", "dot product"],
-            QuestionType.NUMBER_THEORY: ["prime", "divisible", "gcd", "lcm", "modular", "congruent"]
-        }
-        
-        max_score = 0
-        detected_subject = QuestionType.ALGEBRA
-        
-        for subject, keywords in subject_keywords.items():
-            score = sum(1 for keyword in keywords if keyword in question_lower)
-            if score > max_score:
-                max_score = score
-                detected_subject = subject
-        
-        return detected_subject
-
-    async def _estimate_difficulty(self, question: str, steps: List[Step]) -> int:
-        """Estimate difficulty level based on question and solution complexity"""
-        difficulty = 5  # Default medium difficulty
-        
-        # Adjust based on number of steps
-        step_count = len(steps)
-        if step_count <= 2:
-            difficulty -= 1
-        elif step_count >= 6:
-            difficulty += 1
-        
-        # Adjust based on mathematical complexity indicators
-        question_lower = question.lower()
-        complex_terms = [
-            "derivative", "integral", "matrix", "theorem", "proof", "differential",
-            "eigenvalue", "polynomial", "trigonometric", "logarithmic"
-        ]
-        
-        complexity_score = sum(1 for term in complex_terms if term in question_lower)
-        difficulty += min(complexity_score, 3)
-        
-        return min(max(difficulty, 1), 10)
 
     def _create_error_solution(
         self, 
