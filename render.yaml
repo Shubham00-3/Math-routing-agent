@@ -1,0 +1,74 @@
+services:
+  # PostgreSQL Database for structured data
+  - type: pserv
+    name: postgres-db
+    env: docker
+    plan: free
+    postgres:
+      version: 15
+
+  # Redis for caching and high-speed operations
+  - type: pserv
+    name: redis-cache
+    env: docker
+    plan: free
+    redis:
+      version: 7
+
+  # The main FastAPI Backend Application
+  - type: web
+    name: math-agent-backend
+    env: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      # --- Service Connections ---
+      - key: DATABASE_URL
+        fromService:
+          type: pserv
+          name: postgres-db
+          property: connectionString
+      - key: REDIS_HOST
+        fromService:
+          type: pserv
+          name: redis-cache
+          property: host
+      - key: REDIS_PORT
+        fromService:
+          type: pserv
+          name: redis-cache
+          property: port
+      
+      # --- Qdrant Cloud Configuration ---
+      # This will be pulled from the 'api-keys' environment group
+      - key: QDRANT_HOST
+        fromGroup: api-keys
+        keyName: QDRANT_HOST # Use keyName to specify the key from the group
+      - key: QDRANT_PORT
+        value: 6333
+      
+      # --- Application and LLM Settings ---
+      - key: APP_NAME
+        value: "Math Routing Agent"
+      - key: LLM_MODEL
+        value: "groq/llama-3.1-8b-instant"
+      - key: LLM_PROVIDER
+        value: "groq"
+        
+      # --- Link to the Secret Keys Group ---
+      - fromGroup: api-keys
+
+# --- Environment Variable Group for Secrets ---
+# This group securely stores your API keys in the Render dashboard, not on GitHub.
+envVarGroups:
+  - name: api-keys
+    envVars:
+      - key: SECRET_KEY
+      - key: GROQ_API_KEY
+      - key: GOOGLE_API_KEY
+      - key: OPENAI_API_KEY
+      - key: TAVILY_API_KEY
+      - key: QDRANT_API_KEY
+      - key: QDRANT_HOST
