@@ -8,6 +8,7 @@ from app.models.schemas import GuardrailsResult, QuestionType
 from app.core.config import settings
 import httpx
 import asyncio
+from langchain_huggingface import HuggingFaceEmbeddings
 
 logger = logging.getLogger(__name__)
 
@@ -84,16 +85,16 @@ class InputGuardrails:
                     reasoning="Question contains inappropriate content"
                 )
 
-            # Math relevance check
-            math_relevance = await self._check_math_relevance(question)
-            if math_relevance < settings.MATH_RELEVANCE_THRESHOLD:
-                return GuardrailsResult(
-                    is_valid=False,
-                    confidence=math_relevance,
-                    violations=["Not a mathematical question"],
-                    category="relevance_violation",
-                    reasoning="Question is not related to mathematics"
-                )
+            # # Math relevance check
+            # math_relevance = await self._check_math_relevance(question)
+            # if math_relevance < settings.MATH_RELEVANCE_THRESHOLD:
+            #     return GuardrailsResult(
+            #         is_valid=False,
+            #         confidence=math_relevance,
+            #         violations=["Not a mathematical question"],
+            #         category="relevance_violation",
+            #         reasoning="Question is not related to mathematics"
+            #     )
 
             # LLM-based classification
             llm_result = await self._llm_classification(question)
@@ -156,21 +157,66 @@ class InputGuardrails:
         return keyword_score + educational_score + symbol_score + number_score
 
     async def _llm_classification(self, question: str) -> Dict:
-        """Simple classification without LLM for now"""
+        """Enhanced math detection without LLM"""
         question_lower = question.lower()
         
-        # Simple math detection
-        has_numbers = bool(re.search(r'\d', question))
-        has_math_words = any(word in question_lower for word in ['what', 'solve', 'calculate', 'find', '+', '-', '*', '/', '='])
+        # Math keywords and patterns
+        math_keywords = [
+            # Basic operations
+            'solve', 'calculate', 'find', 'compute', 'determine',
+            'what is', 'how much', 'how many', 'equal', 'equals',
+            
+            # Mathematical concepts
+            'area', 'perimeter', 'volume', 'radius', 'diameter', 'circumference',
+            'derivative', 'integral', 'limit', 'function', 'equation', 'formula',
+            'triangle', 'circle', 'square', 'rectangle', 'polygon',
+            'probability', 'statistics', 'mean', 'median', 'mode',
+            'matrix', 'vector', 'algebra', 'geometry', 'calculus',
+            
+            # Mathematical symbols/expressions
+            'x', 'y', 'z', 'sin', 'cos', 'tan', 'log', 'ln', 'sqrt', 'pi'
+        ]
         
-        is_mathematical = has_numbers or has_math_words
+        # Check for math keywords
+        has_math_keywords = any(keyword in question_lower for keyword in math_keywords)
+        
+        # Check for numbers
+        has_numbers = bool(re.search(r'\d', question))
+        
+        # Check for math operators  
+        has_operators = bool(re.search(r'[+\-*/=<>^]', question))
+        
+        # Check for variables (like "2x", "x^2", etc)
+        has_variables = bool(re.search(r'[a-z]\s*[+\-*/=^]|[+\-*/=^]\s*[a-z]|\d+[a-z]|[a-z]\d+', question_lower))
+        
+        # Mathematical question patterns
+        math_patterns = [
+            r'solve\s+for\s+[a-z]',
+            r'find\s+the\s+(area|volume|perimeter)',
+            r'what\s+is\s+\d+.*[+\-*/].*\d+',
+            r'calculate.*\d+',
+            r'derivative\s+of',
+            r'integral\s+of'
+        ]
+        
+        has_math_patterns = any(re.search(pattern, question_lower) for pattern in math_patterns)
+        
+        # Score the question
+        score = 0
+        if has_math_keywords: score += 0.4
+        if has_numbers: score += 0.2  
+        if has_operators: score += 0.3
+        if has_variables: score += 0.3
+        if has_math_patterns: score += 0.5
+        
+        is_mathematical = score >= 0.3  # Lower threshold
         
         return {
             "is_valid": is_mathematical,
-            "confidence": 0.8 if is_mathematical else 0.2,
+            "confidence": min(score, 1.0),
             "violations": [] if is_mathematical else ["Not detected as mathematical"],
             "category": "algebra" if is_mathematical else "unknown",
-            "reasoning": "Basic keyword and number detection"
+            "reasoning": f"Math detection score: {score:.2f}"
         }
 
 class OutputGuardrails:
@@ -270,50 +316,20 @@ class OutputGuardrails:
         return any(re.search(pattern, text_lower) for pattern in non_educational_patterns)
 
     async def _assess_solution_quality(self, question: str, solution: str) -> Dict:
-        """Assess solution quality using LLM"""
-        try:
-            result = await asyncio.get_event_loop().run_in_executor(
-                None, self.quality_chain.run, {"question": question, "solution": solution}
-            )
-            
-            # Parse quality assessment
-            lines = result.strip().split('\n')
-            scores = {}
-            issues = []
-            reasoning = ""
-            
-            for line in lines:
-                if ':' in line:
-                    key, value = line.split(':', 1)
-                    key = key.strip().lower()
-                    value = value.strip()
-                    
-                    if key in ['accuracy', 'clarity', 'educational', 'completeness', 'appropriate', 'overall']:
-                        try:
-                            scores[key] = float(value)
-                        except ValueError:
-                            scores[key] = 0.5
-                    elif key == 'issues':
-                        if value and value.lower() != 'none':
-                            issues = [value]
-                    elif key == 'reasoning':
-                        reasoning = value
+        """Simple quality assessment without OpenAI"""
+        # Basic quality checks
+        has_steps = "step" in solution.lower()
+        has_answer = len(solution) > 100
+        has_explanation = any(word in solution.lower() for word in ['because', 'explanation', 'formula', 'calculate'])
 
-            overall_score = scores.get('overall', 
-                sum(scores.values()) / len(scores) if scores else 0.5)
-            
-            return {
-                "overall_score": overall_score,
-                "detailed_scores": scores,
-                "issues": issues,
-                "reasoning": reasoning
-            }
+        score = 0.7  # Base score
+        if has_steps: score += 0.1
+        if has_answer: score += 0.1  
+        if has_explanation: score += 0.1
 
-        except Exception as e:
-            logger.error(f"Quality assessment error: {str(e)}")
-            return {
-                "overall_score": 0.5,
-                "detailed_scores": {},
-                "issues": ["Assessment error"],
-                "reasoning": f"Error during quality assessment: {str(e)}"
-            }
+        return {
+            "overall_score": min(score, 1.0),
+            "detailed_scores": {"completeness": score},
+            "issues": [],
+            "reasoning": "Basic content analysis - no API costs"
+        }

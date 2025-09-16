@@ -1,3 +1,9 @@
+import asyncio
+import sys
+import os
+import asyncio
+from app.services.web_search import MCPWebSearchService
+
 async def test_mcp_search():
     """Test MCP web search functionality"""
     search_service = MCPWebSearchService()
