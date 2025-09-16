@@ -33,22 +33,26 @@ The Math Routing Agent follows a modern, decoupled architecture:
 
 ### 🔹 System Architecture Diagram
 
+
 flowchart LR
-    U[User] --> F[Frontend<br/>(Next.js, React)]
-    F --> B[Backend<br/>(FastAPI + LangChain)]
-    B --> G[AI Gateway & Guardrails]
-    B --> Q[(Qdrant Vector DB)]
-    B --> P[(PostgreSQL)]
-    B --> R[(Redis Cache)]
-    B --> T[(Web Search via MCP - Tavily)]
-    B --> L[LLM<br/>(Groq / Gemini)]
-    G --> B
-    B --> F
+    User -->|Query| Frontend[Frontend (Next.js, React)]
+    Frontend --> Backend[Backend (FastAPI + LangChain)]
+    Backend --> Guardrails[AI Gateway & Guardrails]
+    Backend --> Qdrant[(Qdrant Vector DB)]
+    Backend --> Postgres[(PostgreSQL DB)]
+    Backend --> Redis[(Redis Cache)]
+    Backend --> Tavily[(Web Search via MCP)]
+    Backend --> LLM[Groq / Gemini (LLM)]
+    Guardrails --> Backend
+    Backend -->|Response| Frontend
+
+
 
 
 ## ⚙️ Agentic RAG Pipeline Flow
 
 Here’s how the agent processes a math question:
+
 
 sequenceDiagram
     participant U as User
@@ -59,20 +63,22 @@ sequenceDiagram
     participant L as LLM
     participant FB as Feedback Agent
 
-    U->>F: Ask math question
-    F->>B: Send query
-    B->>Q: Search vector DB
-    alt Relevant data found
-        Q-->>B: Return context
-    else No relevant data
-        B->>W: Perform web search
-        W-->>B: Return context
-    end
+  U->>F: Ask math question
+  F->>B: Send query
+  B->>Q: Search vector DB
+  alt Found relevant data
+       Q->>B: Return context
+  else No relevant data
+      B->>W: Perform web search
+       W->>B: Return context
+   end
     B->>L: Query LLM with context
-    L-->>B: Generate solution
-    B-->>F: Send step-by-step answer
+    L->>B: Generate step-by-step solution
+    B->>F: Send solution
     U->>FB: Provide feedback
-    FB-->>B: Update self-learning pipeline
+    FB->>B: Update self-learning pipeline
+
+
 
 
 ## 🛠 Tech Stack
@@ -165,5 +171,3 @@ Now open **[http://localhost:3000](http://localhost:3000)** and start solving ma
 * Expand to support physics & engineering problem-solving.
 * Advanced analytics dashboard for teacher feedback.
 * Multi-agent orchestration for collaborative reasoning.
-
----
