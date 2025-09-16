@@ -1,15 +1,14 @@
+# render.yaml
+
+databases:
+  - name: postgres-db
+    plan: free
+
+caches:
+  - name: redis-cache
+    plan: free
+
 services:
-  # PostgreSQL Database
-  - type: postgres
-    name: postgres-db
-    plan: free
-
-  # Redis Cache
-  - type: redis
-    name: redis-cache
-    plan: free
-
-  # The main FastAPI Backend Application
   - type: web
     name: math-agent-backend
     env: docker
@@ -18,12 +17,12 @@ services:
     plan: free
     healthCheckPath: /health
     envVars:
-      # --- Service Connections (Render injects these automatically) ---
+      # --- Connections (Render injects these) ---
       - key: DATABASE_URL
-        fromService:
-          type: postgres
+        fromDatabase:
           name: postgres-db
           property: connectionString
+
       - key: REDIS_HOST
         fromService:
           type: redis
@@ -34,26 +33,26 @@ services:
           type: redis
           name: redis-cache
           property: port
-      
-      # --- Qdrant Cloud Configuration ---
-      - key: QDRANT_HOST
-        fromGroup: api-keys
-        keyName: QDRANT_HOST
-      - key: QDRANT_PORT
-        value: 6333
-      
-      # --- Application and LLM Settings ---
+      - key: REDIS_PASSWORD
+        fromService:
+          type: redis
+          name: redis-cache
+          property: password
+
+      # --- App / LLM Settings ---
       - key: APP_NAME
         value: "Math Routing Agent"
       - key: LLM_MODEL
         value: "groq/llama-3.1-8b-instant"
       - key: LLM_PROVIDER
         value: "groq"
-        
-      # --- Link to the Secret Keys Group ---
+      - key: QDRANT_PORT
+        value: "6333"
+
+      # Import all secrets from the group
       - fromGroup: api-keys
 
-# --- Environment Variable Group for Secrets ---
+# Secrets group
 envVarGroups:
   - name: api-keys
     envVars:
