@@ -1,19 +1,13 @@
 services:
-  # PostgreSQL Database for structured data
-  - type: pserv
+  # PostgreSQL Database
+  - type: psql
     name: postgres-db
-    env: docker
     plan: free
-    postgres:
-      version: 15
 
-  # Redis for caching and high-speed operations
-  - type: pserv
+  # Redis Cache
+  - type: redis
     name: redis-cache
-    env: docker
     plan: free
-    redis:
-      version: 7
 
   # The main FastAPI Backend Application
   - type: web
@@ -24,28 +18,27 @@ services:
     plan: free
     healthCheckPath: /health
     envVars:
-      # --- Service Connections ---
+      # --- Service Connections (Render injects these automatically) ---
       - key: DATABASE_URL
         fromService:
-          type: pserv
+          type: psql
           name: postgres-db
           property: connectionString
       - key: REDIS_HOST
         fromService:
-          type: pserv
+          type: redis
           name: redis-cache
           property: host
       - key: REDIS_PORT
         fromService:
-          type: pserv
+          type: redis
           name: redis-cache
           property: port
       
       # --- Qdrant Cloud Configuration ---
-      # This will be pulled from the 'api-keys' environment group
       - key: QDRANT_HOST
         fromGroup: api-keys
-        keyName: QDRANT_HOST # Use keyName to specify the key from the group
+        keyName: QDRANT_HOST
       - key: QDRANT_PORT
         value: 6333
       
@@ -61,7 +54,6 @@ services:
       - fromGroup: api-keys
 
 # --- Environment Variable Group for Secrets ---
-# This group securely stores your API keys in the Render dashboard, not on GitHub.
 envVarGroups:
   - name: api-keys
     envVars:
