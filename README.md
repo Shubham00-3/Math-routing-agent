@@ -1,7 +1,3 @@
-Of course. Based on all the files in your project, here is a comprehensive `README.md` file. You can copy and paste this directly into your `README.md`.
-
------
-
 # Math Routing Agent
 
 [cite\_start]The Math Routing Agent is a sophisticated Agentic-RAG (Retrieval-Augmented Generation) system designed to function as an AI-powered mathematical professor[cite: 4]. It understands mathematical questions and provides detailed, step-by-step solutions tailored for students. [cite\_start]The system leverages a knowledge base, web search capabilities, and a human-in-the-loop feedback mechanism to continuously improve its accuracy and clarity[cite: 24, 25, 26].
