@@ -8,6 +8,7 @@ services:
   - type: redis
     name: redis-cache
     plan: free
+    ipAllowList: []
 
   - type: web
     name: math-agent-backend
@@ -33,11 +34,11 @@ services:
           type: redis
           name: redis-cache
           property: port
-      - key: REDIS_PASSWORD
+      - key: REDIS_URL
         fromService:
           type: redis
           name: redis-cache
-          property: password
+          property: connectionString
 
       # --- App / LLM Settings ---
       - key: APP_NAME
@@ -57,9 +58,16 @@ envVarGroups:
   - name: api-keys
     envVars:
       - key: SECRET_KEY
+        value: # Set this in Render dashboard
       - key: GROQ_API_KEY
+        value: # Set this in Render dashboard
       - key: GOOGLE_API_KEY
+        value: # Set this in Render dashboard
       - key: OPENAI_API_KEY
+        value: # Set this in Render dashboard
       - key: TAVILY_API_KEY
+        value: # Set this in Render dashboard
       - key: QDRANT_API_KEY
+        value: # Set this in Render dashboard
       - key: QDRANT_HOST
+        value: # Set this in Render dashboard
