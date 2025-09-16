@@ -1,21 +1,21 @@
 # Math Routing Agent
 
-[cite\_start]The Math Routing Agent is a sophisticated Agentic-RAG (Retrieval-Augmented Generation) system designed to function as an AI-powered mathematical professor[cite: 4]. It understands mathematical questions and provides detailed, step-by-step solutions tailored for students. [cite\_start]The system leverages a knowledge base, web search capabilities, and a human-in-the-loop feedback mechanism to continuously improve its accuracy and clarity[cite: 24, 25, 26].
+[cite\_start]The Math Routing Agent is a sophisticated Agentic-RAG (Retrieval-Augmented Generation) system designed to function as an AI-powered mathematical professor[cite: 5]. [cite\_start]It understands mathematical questions and provides detailed, step-by-step solutions tailored for students[cite: 6]. The system leverages a knowledge base, web search capabilities, and a human-in-the-loop feedback mechanism to continuously improve its accuracy and clarity.
 
 ## Core Features
 
-  * **Agentic RAG Pipeline:** The system first queries a Qdrant vector database for existing solutions. [cite\_start]If no relevant information is found, it automatically performs a web search to gather context before generating an answer[cite: 6, 7].
-  * [cite\_start]**AI Gateway & Guardrails:** Implements robust input and output guardrails to ensure all content is strictly mathematical and educational, filtering out irrelevant or inappropriate queries[cite: 10, 11].
-  * **Human-in-the-Loop Feedback:** Users can provide feedback on the quality of solutions. [cite\_start]This feedback is processed by a dedicated feedback agent to identify areas for improvement[cite: 23].
-  * [cite\_start]**DSPy-Powered Self-Learning:** Utilizes the DSPy library to analyze aggregated user feedback and automatically fine-tune the language model, allowing the agent to learn and refine its responses over time (Bonus Requirement Met)[cite: 27, 54].
-  * [cite\_start]**MCP for Web Search:** Uses the Model Context Protocol (MCP) to interact with a dedicated web search server, ensuring a modular and scalable architecture for tool use[cite: 22, 53].
+  * [cite\_start]**Agentic RAG Pipeline:** The system first queries a Qdrant vector database for existing solutions[cite: 7]. [cite\_start]If no relevant information is found, it automatically performs a web search to gather context before generating an answer[cite: 8].
+  * [cite\_start]**AI Gateway & Guardrails:** Implements robust input and output guardrails to ensure all content is strictly mathematical and educational, filtering out irrelevant or inappropriate queries[cite: 11, 12].
+  * [cite\_start]**Human-in-the-Loop Feedback:** Users can provide feedback on the quality of solutions[cite: 24]. [cite\_start]This feedback is processed by a dedicated feedback agent to identify areas for improvement[cite: 25].
+  * [cite\_start]**DSPy-Powered Self-Learning:** Utilizes the DSPy library to analyze aggregated user feedback and automatically fine-tune the language model, allowing the agent to learn and refine its responses over time (Bonus Requirement Met)[cite: 28].
+  * [cite\_start]**MCP for Web Search:** Uses the Model Context Protocol (MCP) to interact with a dedicated web search server, ensuring a modular and scalable architecture for tool use[cite: 23].
 
 ## Architecture
 
 The application follows a modern, decoupled architecture:
 
-  * **Frontend:** A responsive web interface built with **React (Next.js)** allows users to interact with the agent.
-  * **Backend:** A powerful **FastAPI** server orchestrates the agentic workflow, handles API requests, and manages WebSocket connections for real-time communication.
+  * [cite\_start]**Frontend:** A responsive web interface built with **React (Next.js)** allows users to interact with the agent[cite: 42].
+  * [cite\_start]**Backend:** A powerful **FastAPI** server orchestrates the agentic workflow, handles API requests, and manages WebSocket connections for real-time communication[cite: 42].
   * **Infrastructure:** A **Docker Compose** setup manages the necessary services, including a **PostgreSQL** database, a **Qdrant** vector database for the knowledge base, and a **Redis** cache.
 
 ## Tech Stack
