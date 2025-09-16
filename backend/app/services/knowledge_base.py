@@ -644,6 +644,7 @@
 #             logger.error(f"Error getting collection stats: {str(e)}")
 #             return {}
 
+# backend/app/services/knowledge_base.py
 import uuid
 import logging
 from typing import List, Optional, Dict, Tuple
@@ -688,15 +689,15 @@ class KnowledgeBaseService:
     async def initialize_collection(self):
         """Initialize Qdrant collection with proper configuration"""
         try:
-            collections = self.client.get_collections()
-            collection_names = [col.name for col in collections.collections]
+            collections = self.client.get_collections().collections
+            collection_names = [col.name for col in collections]
 
             if self.collection_name not in collection_names:
                 logger.info(f"Creating collection: {self.collection_name}")
                 self.client.create_collection(
                     collection_name=self.collection_name,
                     vectors_config=VectorParams(
-                        size=384,  # Correct size for all-MiniLM-L6-v2
+                        size=384,
                         distance=Distance.COSINE
                     )
                 )
@@ -804,17 +805,16 @@ class KnowledgeBaseService:
         except Exception as e:
             logger.error(f"Error searching similar questions: {str(e)}")
             return []
-
+            
     async def get_recent_entries(self, limit: int = 10, offset: int = 0) -> List[KnowledgeEntry]:
         """Retrieve recent entries from the knowledge base"""
         try:
-            # This is a simplified retrieval. A real implementation might sort by date.
             response, _ = self.client.scroll(
                 collection_name=self.collection_name,
                 limit=limit,
                 offset=offset,
                 with_payload=True,
-                with_vectors=False # No need for vectors here
+                with_vectors=False
             )
             
             entries = []
@@ -829,7 +829,6 @@ class KnowledgeBaseService:
         except Exception as e:
             logger.error(f"Error getting recent entries: {str(e)}")
             return []
-
 
     def _create_searchable_text(self, entry: KnowledgeEntry) -> str:
         """Create searchable text from knowledge entry"""
