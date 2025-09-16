@@ -1,6 +1,6 @@
 services:
   # PostgreSQL Database
-  - type: psql
+  - type: postgres
     name: postgres-db
     plan: free
 
@@ -21,7 +21,7 @@ services:
       # --- Service Connections (Render injects these automatically) ---
       - key: DATABASE_URL
         fromService:
-          type: psql
+          type: postgres
           name: postgres-db
           property: connectionString
       - key: REDIS_HOST
