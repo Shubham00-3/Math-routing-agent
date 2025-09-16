@@ -90,3 +90,4 @@ zstandard==0.25.0
 langchain-groq>=0.1.0
 langchain-google-genai>=1.0.0
 tavily-python>=0.3.0
+dspy-ai>=2.4.0
