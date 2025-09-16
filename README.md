@@ -1,102 +1,175 @@
-# Math Routing Agent
+# Math Routing Agent 🚀
 
-[cite\_start]The Math Routing Agent is a sophisticated Agentic-RAG (Retrieval-Augmented Generation) system designed to function as an AI-powered mathematical professor[cite: 5]. [cite\_start]It understands mathematical questions and provides detailed, step-by-step solutions tailored for students[cite: 6]. The system leverages a knowledge base, web search capabilities, and a human-in-the-loop feedback mechanism to continuously improve its accuracy and clarity.
+The **Math Routing Agent** is a next-generation **Agentic-RAG (Retrieval-Augmented Generation)** system built to act as an **AI-powered mathematical professor**. It understands mathematical problems and delivers clear, step-by-step solutions tailored for students. The system combines a knowledge base, real-time web search, and human feedback loops to improve continuously.
 
-## Core Features
+---
 
-  * [cite\_start]**Agentic RAG Pipeline:** The system first queries a Qdrant vector database for existing solutions[cite: 7]. [cite\_start]If no relevant information is found, it automatically performs a web search to gather context before generating an answer[cite: 8].
-  * [cite\_start]**AI Gateway & Guardrails:** Implements robust input and output guardrails to ensure all content is strictly mathematical and educational, filtering out irrelevant or inappropriate queries[cite: 11, 12].
-  * [cite\_start]**Human-in-the-Loop Feedback:** Users can provide feedback on the quality of solutions[cite: 24]. [cite\_start]This feedback is processed by a dedicated feedback agent to identify areas for improvement[cite: 25].
-  * [cite\_start]**DSPy-Powered Self-Learning:** Utilizes the DSPy library to analyze aggregated user feedback and automatically fine-tune the language model, allowing the agent to learn and refine its responses over time (Bonus Requirement Met)[cite: 28].
-  * [cite\_start]**MCP for Web Search:** Uses the Model Context Protocol (MCP) to interact with a dedicated web search server, ensuring a modular and scalable architecture for tool use[cite: 23].
+## ✨ Core Features
 
-## Architecture
+* **Agentic RAG Pipeline**
+  Queries a **Qdrant Vector Database** for existing solutions. If nothing relevant is found, it automatically performs a **web search** to gather context before generating an answer.
 
-The application follows a modern, decoupled architecture:
+* **AI Gateway & Guardrails**
+  Input/output guardrails ensure responses are strictly mathematical and educational, filtering out irrelevant or unsafe queries.
 
-  * [cite\_start]**Frontend:** A responsive web interface built with **React (Next.js)** allows users to interact with the agent[cite: 42].
-  * [cite\_start]**Backend:** A powerful **FastAPI** server orchestrates the agentic workflow, handles API requests, and manages WebSocket connections for real-time communication[cite: 42].
-  * **Infrastructure:** A **Docker Compose** setup manages the necessary services, including a **PostgreSQL** database, a **Qdrant** vector database for the knowledge base, and a **Redis** cache.
+* **Human-in-the-Loop Feedback**
+  Users can rate answers. A dedicated **feedback agent** processes this input to identify gaps and improve quality.
 
-## Tech Stack
+* **DSPy-Powered Self-Learning**
+  Uses the **DSPy library** to analyze aggregated feedback and fine-tune the model automatically, making the agent smarter over time.
 
-  * **Backend:** Python, FastAPI, LangChain, DSPy, Qdrant Client
-  * **Frontend:** TypeScript, React, Next.js, Tailwind CSS, React Query
-  * **LLM:** Groq (easily configurable for other providers like Gemini)
-  * **Web Search:** Tavily API
-  * **Database:** Qdrant (VectorDB), PostgreSQL
-  * **Deployment:** Docker
+* **MCP for Web Search**
+  Employs the **Model Context Protocol (MCP)** to interact with a modular web search server, ensuring scalability and extensibility.
 
-## Setup and Installation
+---
 
-Follow these steps to get the Math Routing Agent running locally.
+## 🏗 Architecture
 
-#### 1\. Prerequisites
+The Math Routing Agent follows a modern, decoupled architecture:
 
-  * Docker and Docker Compose
-  * Python 3.11+
-  * Node.js and npm
+* **Frontend**: React (Next.js) interface with Tailwind CSS, providing a smooth and responsive UI.
+* **Backend**: FastAPI server orchestrating the agentic workflow, API requests, and WebSocket real-time communication.
+* **Infrastructure**: Docker Compose manages **PostgreSQL**, **Qdrant (VectorDB)**, and **Redis**.
 
-#### 2\. Clone the Repository
+### 🔹 System Architecture Diagram
+
+```mermaid
+flowchart LR
+    User -->|Query| Frontend[Frontend (Next.js, React)]
+    Frontend --> Backend[Backend (FastAPI + LangChain)]
+    Backend --> Guardrails[AI Gateway & Guardrails]
+    Backend --> Qdrant[(Qdrant Vector DB)]
+    Backend --> Postgres[(PostgreSQL DB)]
+    Backend --> Redis[(Redis Cache)]
+    Backend --> Tavily[(Web Search via MCP)]
+    Backend --> LLM[Groq / Gemini (LLM)]
+    Guardrails --> Backend
+    Backend -->|Response| Frontend
+```
+
+---
+
+## ⚙️ Agentic RAG Pipeline Flow
+
+Here’s how the agent processes a math question:
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant F as Frontend
+    participant B as Backend
+    participant Q as Qdrant DB
+    participant W as Web Search
+    participant L as LLM
+    participant FB as Feedback Agent
+
+    U->>F: Ask math question
+    F->>B: Send query
+    B->>Q: Search vector DB
+    alt Found relevant data
+        Q->>B: Return context
+    else No relevant data
+        B->>W: Perform web search
+        W->>B: Return context
+    end
+    B->>L: Query LLM with context
+    L->>B: Generate step-by-step solution
+    B->>F: Send solution
+    U->>FB: Provide feedback
+    FB->>B: Update self-learning pipeline
+```
+
+---
+
+## 🛠 Tech Stack
+
+**Backend**: Python, FastAPI, LangChain, DSPy, Qdrant Client
+**Frontend**: TypeScript, React, Next.js, Tailwind CSS, React Query
+**LLM Provider**: Groq (configurable: Gemini, etc.)
+**Web Search**: Tavily API
+**Databases**: Qdrant (vector store), PostgreSQL (relational), Redis (cache)
+**Deployment**: Docker & Docker Compose
+
+---
+
+## ⚡ Setup & Installation
+
+### 1. Prerequisites
+
+* Docker & Docker Compose
+* Python 3.11+
+* Node.js & npm
+
+### 2. Clone the Repository
 
 ```bash
 git clone <your-repo-url>
 cd math-routing-agent
 ```
 
-#### 3\. Configure Environment Variables
+### 3. Configure Environment Variables
 
-Create a `.env` file in the project's root directory by copying the example file:
+Copy the example `.env` file and add your API keys (Groq + Tavily):
 
 ```bash
 cp .env.example .env
 ```
 
-Now, open the `.env` file and add your API keys for **Groq** and **Tavily**.
+Open `.env` and update with your credentials.
 
-#### 4\. Launch Infrastructure with Docker
-
-This command will start the Qdrant, PostgreSQL, and Redis containers.
+### 4. Launch Infrastructure with Docker
 
 ```bash
 docker-compose up -d
 ```
 
-#### 5\. Set Up the Backend
+This will start **Qdrant**, **PostgreSQL**, and **Redis**.
+
+### 5. Backend Setup
 
 ```bash
 cd backend
 python -m venv venv
-source venv/Scripts/activate  # On Windows (Git Bash)
-# source venv/bin/activate    # On macOS/Linux
+source venv/Scripts/activate    # On Windows (Git Bash)
+# source venv/bin/activate      # On macOS/Linux
 pip install -r requirements.txt
 ```
 
-#### 6\. Set Up the Frontend
+### 6. Frontend Setup
 
 ```bash
 cd ../frontend
 npm install
 ```
 
-## Running the Application
+---
 
-1.  **Start the Backend Server:**
-    In the `backend` directory, run:
+## ▶ Running the Application
 
-    ```bash
-    uvicorn app.main:app --reload
-    ```
+**Start Backend (FastAPI)**
 
-    The backend will be available at `http://127.0.0.1:8000`.
+```bash
+uvicorn app.main:app --reload
+```
 
-2.  **Start the Frontend Server:**
-    In a new terminal, from the `frontend` directory, run:
+Available at: **[http://127.0.0.1:8000](http://127.0.0.1:8000)**
 
-    ```bash
-    npm run dev
-    ```
+**Start Frontend (Next.js)**
 
-    The frontend will be available at `http://localhost:3000`.
+```bash
+npm run dev
+```
 
-You can now open your browser to `http://localhost:3000` to start using the Math Routing Agent.
+Available at: **[http://localhost:3000](http://localhost:3000)**
+
+Now open **[http://localhost:3000](http://localhost:3000)** and start solving math problems with the **Math Routing Agent** 🎓.
+
+---
+
+## 📚 Future Directions
+
+* Expand to support physics & engineering problem-solving.
+* Advanced analytics dashboard for teacher feedback.
+* Multi-agent orchestration for collaborative reasoning.
+
+---
