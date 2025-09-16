@@ -1,16 +1,17 @@
 # backend/app/main.py
-from fastapi import FastAPI, HTTPException, Depends, BackgroundTasks
+from fastapi import FastAPI, HTTPException, Depends, BackgroundTasks, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import logging
 import time
 import uuid
 from contextlib import asynccontextmanager
+from typing import List, Dict
 
 # Import your agents and services
 from app.agents.math_agent import MathAgent
 from app.models.schemas import (
-    MathQuestionRequest, SolutionResponse, 
+    MathQuestionRequest, SolutionResponse,
     FeedbackRequest, FeedbackResponse
 )
 from app.services.knowledge_base import KnowledgeBaseService
@@ -26,6 +27,25 @@ logger = logging.getLogger(__name__)
 # Initialize global agents
 math_agent = None
 kb_service = None
+
+# WebSocket Connection Manager
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: Dict[str, WebSocket] = {}
+
+    async def connect(self, websocket: WebSocket, client_id: str):
+        await websocket.accept()
+        self.active_connections[client_id] = websocket
+
+    def disconnect(self, client_id: str):
+        if client_id in self.active_connections:
+            del self.active_connections[client_id]
+
+    async def send_to_client(self, message: dict, client_id: str):
+        if client_id in self.active_connections:
+            await self.active_connections[client_id].send_json(message)
+
+manager = ConnectionManager()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -75,6 +95,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.websocket("/socket.io/")
+async def websocket_endpoint(websocket: WebSocket, client_id: str = "default_client"):
+    await manager.connect(websocket, client_id)
+    try:
+        while True:
+            data = await websocket.receive_text()
+            logger.info(f"Received WebSocket message from {client_id}: {data}")
+    except WebSocketDisconnect:
+        manager.disconnect(client_id)
+        logger.info(f"Client {client_id} disconnected")
+
+
 # Simple auth dependency (for now just return anonymous user)
 async def get_current_user():
     return {"user_id": "anonymous", "username": "anonymous"}
@@ -97,6 +129,18 @@ async def root():
             "✅ Input/Output guardrails"
         ]
     }
+    
+# History Endpoint
+@app.get("/api/v1/math/history", response_model=List[SolutionResponse])
+async def get_solution_history(limit: int = 10, offset: int = 0):
+    """
+    Get the history of previously solved math problems.
+    """
+    # This is a placeholder. In a real application, you would fetch this
+    # from your database.
+    history = await kb_service.get_recent_entries(limit=limit, offset=offset)
+    return [entry.solution for entry in history]
+
 
 # Health check endpoints
 @app.get("/health")

@@ -58,7 +58,7 @@ class Settings(BaseSettings):
     # MCP Configuration
     MCP_SERVER_HOST: str = "localhost"
     MCP_SERVER_PORT: int = 8080
-    MCP_SEARCH_SERVER_PATH: str = "./mcp/servers/search_server.py"
+    MCP_SEARCH_SERVER_PATH: str = "../mcp/servers/search_server.py"
     
     class Config:
         env_file = ".env"
