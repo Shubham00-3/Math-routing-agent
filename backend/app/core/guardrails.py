@@ -8,7 +8,7 @@ from app.models.schemas import GuardrailsResult, QuestionType
 from app.core.config import settings
 import httpx
 import asyncio
-from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_community.embeddings import HuggingFaceEmbeddings
 
 logger = logging.getLogger(__name__)
 
