@@ -118,13 +118,19 @@ class MathRoutingAgent:
                     decision = RoutingDecision.KNOWLEDGE_BASE_ONLY
                     context_data["reasoning"] = f"Strong KB match ({kb_score:.3f})"
             
-            elif self._mcp_available and question_analysis["needs_external_search"]:
-                if kb_score > self.web_search_threshold:
+            elif self._mcp_available:
+                # If web search is available, use it when KB score is low, regardless of question type
+                if kb_score > self.hybrid_threshold:  # 0.6
                     decision = RoutingDecision.HYBRID
-                    context_data["reasoning"] = f"Moderate KB match ({kb_score:.3f}) + external search needed"
+                    context_data["reasoning"] = f"Moderate KB match ({kb_score:.3f}) + web search available for verification"
+                elif kb_score > self.web_search_threshold:  # 0.5
+                    # For scores between 0.5-0.6, use hybrid approach
+                    decision = RoutingDecision.HYBRID  
+                    context_data["reasoning"] = f"Moderate KB match ({kb_score:.3f}), hybrid approach with web verification"
                 else:
+                    # For scores below 0.5, use web search primarily
                     decision = RoutingDecision.WEB_SEARCH_ONLY
-                    context_data["reasoning"] = f"Low KB match ({kb_score:.3f}), needs web search"
+                    context_data["reasoning"] = f"Low KB match ({kb_score:.3f}), web search for better results"
             
             else:
                 # Fallback to standalone when web search isn't available
