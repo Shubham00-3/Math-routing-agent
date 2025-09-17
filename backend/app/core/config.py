@@ -36,7 +36,7 @@ class Settings(BaseSettings):
     GROQ_API_KEY: str = ""
     GOOGLE_API_KEY: str = ""
     OPENAI_API_KEY: str = ""  # Backup if needed
-    LLM_MODEL: str = "groq/llama3-8b-8192"
+    LLM_MODEL: str = "llama-3.1-8b-instant"
     LLM_PROVIDER: str = "groq"
     LLM_TEMPERATURE: float = 0.1
     MAX_TOKENS: int = 2000

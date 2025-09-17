@@ -1,3 +1,4 @@
+#search_server.py
 import asyncio
 import json
 import logging
@@ -7,7 +8,8 @@ from datetime import datetime
 import re
 
 # MCP Server Implementation
-from mcp.server import Server, stdio_server
+from mcp.server import Server 
+import mcp.server.stdio as stdio_server
 from mcp.types import Tool, TextContent, ImageContent
 import mcp.server.stdio
 

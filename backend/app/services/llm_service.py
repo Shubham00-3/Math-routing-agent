@@ -198,13 +198,13 @@ Step 1: [Clear description]
 Explanation: [Why this step is necessary and how it works]
 Formula (if applicable): [Mathematical formula used]
 
-Step 2: [Clear description]  
+Step 2: [Clear description]
 Explanation: [Why this step is necessary and how it works]
 Formula (if applicable): [Mathematical formula used]
 
 [Continue for all steps...]
 
-FINAL ANSWER: [Clear, concise final answer]
+FINAL ANSWER: For multiple choice questions, provide ONLY the letter of the correct option (e.g., A, B, C, D, or BCD if multiple are correct). For numerical questions, provide ONLY the final number.
 
 CONFIDENCE: [Your confidence level from 0.0 to 1.0]
 
@@ -259,7 +259,7 @@ Relevance: {result.relevance_score}
         source_type: SourceType,
         subject: Optional[QuestionType]
     ) -> SolutionResponse:
-        """Parse LLM response into structured SolutionResponse"""
+        """Parse LLM response into structured SolutionResponse with improved answer extraction"""
         try:
             steps = []
             final_answer = ""
@@ -269,6 +269,7 @@ Relevance: {result.relevance_score}
             # Split response into sections
             sections = solution_text.split('\n\n')
             
+            # First pass - extract structured content
             for section in sections:
                 section = section.strip()
                 
@@ -302,7 +303,11 @@ Relevance: {result.relevance_score}
                         steps.append(current_step)
                 
                 elif section.upper().startswith('FINAL ANSWER'):
+                    # FIXED: Better final answer extraction
                     final_answer = section[12:].strip()
+                    # Remove leading colon and spaces
+                    if final_answer.startswith(':'):
+                        final_answer = final_answer[1:].strip()
                 
                 elif section.upper().startswith('CONFIDENCE'):
                     try:
@@ -319,20 +324,21 @@ Relevance: {result.relevance_score}
                 elif section.upper().startswith('EDUCATIONAL NOTES'):
                     educational_notes = section[17:].strip()
             
-            # Create fallback if no proper steps found
+            # IMPROVED: Second pass - try to extract answer if not found in structured format
+            if not final_answer or final_answer in ["", "Please see the solution steps above for the complete answer."]:
+                final_answer = self._extract_answer_from_text(solution_text, question)
+            
+            # Create fallback steps if none found
             if not steps:
                 steps = [
                     Step(
                         step_number=1,
-                        description="Analyze the mathematical problem",
-                        explanation=solution_text[:200] + "..." if len(solution_text) > 200 else solution_text,
+                        description="Solution analysis",
+                        explanation=solution_text[:300] + "..." if len(solution_text) > 300 else solution_text,
                         formula=None,
                         visual_aid=None
                     )
                 ]
-            
-            if not final_answer:
-                final_answer = "Please see the solution steps above for the complete answer."
             
             # Create solution response
             solution = SolutionResponse(
@@ -354,6 +360,68 @@ Relevance: {result.relevance_score}
         except Exception as e:
             logger.error(f"Error parsing solution response: {str(e)}")
             return self._create_error_solution(question, str(e), source_type, subject)
+
+    def _extract_answer_from_text(self, solution_text: str, question: str) -> str:
+        """Try to extract the final answer using multiple strategies"""
+        import re
+        
+        # Strategy 1: Look for multiple choice patterns
+        if self._is_multiple_choice_question(question):
+            # Look for explicit answer patterns
+            patterns = [
+                r'answer\s*:?\s*\(?([abcd])\)?',
+                r'option\s*:?\s*\(?([abcd])\)?', 
+                r'choice\s*:?\s*\(?([abcd])\)?',
+                r'the\s+answer\s+is\s*:?\s*\(?([abcd])\)?',
+                r'therefore\s*:?\s*\(?([abcd])\)?',
+                r'\b([abcd])\s*is\s+correct',
+                r'correct\s+answer\s*:?\s*\(?([abcd])\)?'
+            ]
+            
+            for pattern in patterns:
+                match = re.search(pattern, solution_text.lower())
+                if match:
+                    return match.group(1).upper()
+            
+            # Look for isolated letters in the last few sentences
+            sentences = solution_text.lower().split('.')
+            for sentence in sentences[-3:]:
+                isolated_letter = re.search(r'\b([abcd])\b', sentence.strip())
+                if isolated_letter:
+                    return isolated_letter.group(1).upper()
+        
+        # Strategy 2: Look for numerical answers
+        numerical_patterns = [
+            r'final\s+answer\s*:?\s*([^.\n]+)',
+            r'answer\s*:?\s*([^.\n]+)',
+            r'therefore\s*:?\s*([^.\n]+)',
+            r'result\s*:?\s*([^.\n]+)',
+            r'solution\s*:?\s*([^.\n]+)'
+        ]
+        
+        for pattern in numerical_patterns:
+            match = re.search(pattern, solution_text.lower())
+            if match:
+                answer = match.group(1).strip()
+                if answer and len(answer) < 100:  # Reasonable answer length
+                    return answer
+        
+        # Strategy 3: Look at the end of the text for answers
+        last_lines = solution_text.strip().split('\n')[-3:]
+        for line in reversed(last_lines):
+            line = line.strip()
+            if line and len(line) < 50:  # Likely a final answer
+                # Clean up formatting
+                cleaned = re.sub(r'^[:\-\s]+', '', line)
+                if cleaned:
+                    return cleaned
+        
+        # Fallback
+        return "Unable to determine final answer from solution"
+
+    def _is_multiple_choice_question(self, question: str) -> bool:
+        """Check if question is multiple choice"""
+        return bool(re.search(r'\([ABCD]\)', question))
 
     def _create_error_solution(
         self, 

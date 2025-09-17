@@ -1,0 +1,42 @@
+[
+  {
+    "question": "Let $-\\frac{\\pi}{6}<\\theta<-\\frac{\\pi}{12}$. Suppose $\\alpha_{1}$ and $\\beta_{1}$ are the roots of the equation $x^{2}-2 x \\sec \\theta+1=0$ and $\\alpha_{2}$ and $\\beta_{2}$ are the roots of the equation $x^{2}+2 x \\tan \\theta-1=0$. If $\\alpha_{1}>\\beta_{1}$ and $\\alpha_{2}>\\beta_{2}$, then $\\alpha_{1}+\\beta_{2}$ equals\n\n(A) $2(\\sec \\theta-\\tan \\theta)$\n\n(B) $2 \\sec \\theta$\n\n(C) $-2 \\tan \\theta$\n\n(D) 0",
+    "ground_truth_answer": "C",
+    "generated_answer": "Please see the solution steps above for the complete answer.",
+    "is_correct": false,
+    "confidence": 0.8,
+    "source": "knowledge_base"
+  },
+  {
+    "question": "A debate club consists of 6 girls and 4 boys. A team of 4 members is to be selected from this club including the selection of a captain (from among these 4 members) for the team. If the team has to include at most one boy, then the number of ways of selecting the team is\n\n(A) 380\n\n(B) 320\n\n(C) 260\n\n(D) 95",
+    "ground_truth_answer": "A",
+    "generated_answer": ": 380\nCONFIDENCE: 1.0",
+    "is_correct": false,
+    "confidence": 0.7200000000000001,
+    "source": "hybrid"
+  },
+  {
+    "question": "Let $S=\\left\\{x \\in(-\\pi, \\pi): x \\neq 0, \\pm \\frac{\\pi}{2}\\right\\}$. The sum of all distinct solutions of the equation $\\sqrt{3} \\sec x+\\operatorname{cosec} x+2(\\tan x-\\cot x)=0$ in the set $S$ is equal to\n\n(A) $-\\frac{7 \\pi}{9}$\n\n(B) $-\\frac{2 \\pi}{9}$\n\n(C) 0\n\n(D) $\\frac{5 \\pi}{9}$",
+    "ground_truth_answer": "C",
+    "generated_answer": "Please see the solution steps above for the complete answer.",
+    "is_correct": false,
+    "confidence": 0.8,
+    "source": "knowledge_base"
+  },
+  {
+    "question": "A computer producing factory has only two plants $T_{1}$ and $T_{2}$. Plant $T_{1}$ produces $20 \\%$ and plant $T_{2}$ produces $80 \\%$ of the total computers produced. $7 \\%$ of computers produced in the factory turn out to be defective. It is known that\n\n$P$ (computer turns out to be defective given that it is produced in plant $T_{1}$ )\n\n$=10 P\\left(\\right.$ computer turns out to be defective given that it is produced in plant $\\left.T_{2}\\right)$,\n\nwhere $P(E)$ denotes the probability of an event $E$. A computer produced in the factory is randomly selected and it does not turn out to be defective. Then the probability that it is produced in plant $T_{2}$ is\n\n(A) $\\frac{36}{73}$\n\n(B) $\\frac{47}{79}$\n\n(C) $\\frac{78}{93}$\n\n(D) $\\frac{75}{83}$",
+    "ground_truth_answer": "C",
+    "generated_answer": ": $\\frac{75}{83}$",
+    "is_correct": false,
+    "confidence": 1.0,
+    "source": "knowledge_base"
+  },
+  {
+    "question": "The least value of $\\alpha \\in \\mathbb{R}$ for which $4 \\alpha x^{2}+\\frac{1}{x} \\geq 1$, for all $x>0$, is\n\n(A) $\\frac{1}{64}$\n\n(B) $\\frac{1}{32}$\n\n(C) $\\frac{1}{27}$\n\n(D) $\\frac{1}{25}$",
+    "ground_truth_answer": "C",
+    "generated_answer": "Please see the solution steps above for the complete answer.",
+    "is_correct": false,
+    "confidence": 0.8,
+    "source": "knowledge_base"
+  }
+]

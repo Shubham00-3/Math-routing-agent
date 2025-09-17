@@ -1,0 +1,26 @@
+[
+  {
+    "question": "Let $-\\frac{\\pi}{6}<\\theta<-\\frac{\\pi}{12}$. Suppose $\\alpha_{1}$ and $\\beta_{1}$ are the roots of the equation $x^{2}-2 x \\sec \\theta+1=0$ and $\\alpha_{2}$ and $\\beta_{2}$ are the roots of the equati",
+    "ground_truth_answer": "C",
+    "generated_answer": "D",
+    "is_correct": false,
+    "confidence": 1.0,
+    "source": "web_search"
+  },
+  {
+    "question": "A debate club consists of 6 girls and 4 boys. A team of 4 members is to be selected from this club including the selection of a captain (from among these 4 members) for the team. If the team has to in",
+    "ground_truth_answer": "A",
+    "generated_answer": "A",
+    "is_correct": true,
+    "confidence": 1.0,
+    "source": "web_search"
+  },
+  {
+    "question": "Let $S=\\left\\{x \\in(-\\pi, \\pi): x \\neq 0, \\pm \\frac{\\pi}{2}\\right\\}$. The sum of all distinct solutions of the equation $\\sqrt{3} \\sec x+\\operatorname{cosec} x+2(\\tan x-\\cot x)=0$ in the set $S$ is eq",
+    "ground_truth_answer": "C",
+    "generated_answer": "step 1: rewrite the given equation in terms of trigonometric functions",
+    "is_correct": false,
+    "confidence": 0.8,
+    "source": "web_search"
+  }
+]
