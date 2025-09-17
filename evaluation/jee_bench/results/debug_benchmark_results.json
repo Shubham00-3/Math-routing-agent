@@ -5,7 +5,7 @@
     "generated_answer": "D",
     "is_correct": false,
     "confidence": 1.0,
-    "source": "web_search"
+    "source": "knowledge_base"
   },
   {
     "question": "A debate club consists of 6 girls and 4 boys. A team of 4 members is to be selected from this club including the selection of a captain (from among these 4 members) for the team. If the team has to in",
@@ -13,14 +13,70 @@
     "generated_answer": "A",
     "is_correct": true,
     "confidence": 1.0,
-    "source": "web_search"
+    "source": "hybrid"
   },
   {
     "question": "Let $S=\\left\\{x \\in(-\\pi, \\pi): x \\neq 0, \\pm \\frac{\\pi}{2}\\right\\}$. The sum of all distinct solutions of the equation $\\sqrt{3} \\sec x+\\operatorname{cosec} x+2(\\tan x-\\cot x)=0$ in the set $S$ is eq",
     "ground_truth_answer": "C",
-    "generated_answer": "step 1: rewrite the given equation in terms of trigonometric functions",
+    "generated_answer": "Step 1: Rewrite the given equation in terms of trigonometric functions",
     "is_correct": false,
     "confidence": 0.8,
+    "source": "knowledge_base"
+  },
+  {
+    "question": "A computer producing factory has only two plants $T_{1}$ and $T_{2}$. Plant $T_{1}$ produces $20 \\%$ and plant $T_{2}$ produces $80 \\%$ of the total computers produced. $7 \\%$ of computers produced in",
+    "ground_truth_answer": "C",
+    "generated_answer": "D",
+    "is_correct": false,
+    "confidence": 0.9,
+    "source": "web_search"
+  },
+  {
+    "question": "The least value of $\\alpha \\in \\mathbb{R}$ for which $4 \\alpha x^{2}+\\frac{1}{x} \\geq 1$, for all $x>0$, is\n\n(A) $\\frac{1}{64}$\n\n(B) $\\frac{1}{32}$\n\n(C) $\\frac{1}{27}$\n\n(D) $\\frac{1}{25}$",
+    "ground_truth_answer": "C",
+    "generated_answer": "A",
+    "is_correct": true,
+    "confidence": 1.0,
+    "source": "web_search"
+  },
+  {
+    "question": "Consider a pyramid $O P Q R S$ located in the first octant $(x \\geq 0, y \\geq 0, z \\geq 0)$ with $O$ as origin, and $O P$ and $O R$ along the $x$-axis and the $y$-axis, respectively. The base $O P Q R",
+    "ground_truth_answer": "BCD",
+    "generated_answer": "Step 1: Find the coordinates of point $Q$",
+    "is_correct": false,
+    "confidence": 0.8,
+    "source": "web_search"
+  },
+  {
+    "question": "Let $f:(0, \\infty) \\rightarrow \\mathbb{R}$ be a differentiable function such that $f^{\\prime}(x)=2-\\frac{f(x)}{x}$ for all $x \\in(0, \\infty)$ and $f(1) \\neq 1$. Then\n\n(A) $\\lim _{x \\rightarrow 0+} f^{",
+    "ground_truth_answer": "A",
+    "generated_answer": "C",
+    "is_correct": true,
+    "confidence": 0.8,
+    "source": "web_search"
+  },
+  {
+    "question": "Let $P=\\left[\\begin{array}{ccc}3 & -1 & -2 \\\\ 2 & 0 & \\alpha \\\\ 3 & -5 & 0\\end{array}\\right]$, where $\\alpha \\in \\mathbb{R}$. Suppose $Q=\\left[q_{i j}\\right]$ is a matrix such that $P Q=k I$, where $k",
+    "ground_truth_answer": "BC",
+    "generated_answer": "Step 1: Express the relationship between P and Q using the given equation PQ = kI",
+    "is_correct": false,
+    "confidence": 0.8,
+    "source": "web_search"
+  },
+  {
+    "question": "In a triangle $X Y Z$, let $x, y, z$ be the lengths of sides opposite to the angles $X, Y, Z$, respectively, and $2 s=x+y+z$. If $\\frac{s-x}{4}=\\frac{s-y}{3}=\\frac{s-z}{2}$ and area of incircle of the",
+    "ground_truth_answer": "ACD",
+    "generated_answer": "A",
+    "is_correct": false,
+    "confidence": 0.9,
+    "source": "web_search"
+  },
+  {
+    "question": "A solution curve of the differential equation $\\left(x^{2}+x y+4 x+2 y+4\\right) \\frac{d y}{d x}-y^{2}=0, x>0$, passes through the point $(1,3)$. Then the solution curve\n\n(A) intersects $y=x+2$ exactly",
+    "ground_truth_answer": "AD",
+    "generated_answer": "A",
+    "is_correct": false,
+    "confidence": 0.9,
     "source": "web_search"
   }
 ]

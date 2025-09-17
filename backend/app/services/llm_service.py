@@ -82,8 +82,12 @@ Your task is to:
 4. Format the solution in clear, numbered steps
 5. Ensure the final answer is clearly stated
 
-Focus on pedagogy - make complex concepts accessible while maintaining mathematical rigor.
-Always explain the reasoning behind each step.""",
+CRITICAL: For multiple choice questions:
+- If ONE option is correct, provide only that letter (A, B, C, or D)
+- If MULTIPLE options are correct, provide ALL correct letters together (like BCD or ACD)
+- Do NOT explain WHY in the final answer - just give the letter(s)
+
+Focus on pedagogy while maintaining mathematical rigor.""",
 
             "web_search": """You are a mathematical professor creating step-by-step solutions.
 You have been provided with web search results about a mathematical problem.
@@ -95,7 +99,11 @@ Your task is to:
 5. Include relevant formulas and concepts
 6. Provide the final answer clearly
 
-If the search results are inconsistent or unclear, note this and provide the most likely correct solution with appropriate caveats.
+CRITICAL: For multiple choice questions:
+- If ONE option is correct, provide only that letter (A, B, C, or D)  
+- If MULTIPLE options are correct, provide ALL correct letters together (like BCD or ACD)
+- Do NOT explain WHY in the final answer - just give the letter(s)
+
 Always prioritize educational value and clarity.""",
 
             "hybrid": """You are a mathematical professor combining knowledge base information with web research.
@@ -108,6 +116,11 @@ Your task is to:
 5. Include multiple solution methods if available
 6. Give the final answer with confidence level
 
+CRITICAL: For multiple choice questions:
+- If ONE option is correct, provide only that letter (A, B, C, or D)
+- If MULTIPLE options are correct, provide ALL correct letters together (like BCD or ACD)  
+- Do NOT explain WHY in the final answer - just give the letter(s)
+
 Synthesize the best of both sources while maintaining educational focus.""",
 
             "standalone": """You are a mathematical professor solving a problem without external resources.
@@ -118,6 +131,11 @@ Your task is to:
 4. Include relevant mathematical concepts and formulas
 5. Provide the final answer
 6. Note if you're uncertain about any aspect
+
+CRITICAL: For multiple choice questions:
+- If ONE option is correct, provide only that letter (A, B, C, or D)
+- If MULTIPLE options are correct, provide ALL correct letters together (like BCD or ACD)
+- Do NOT explain WHY in the final answer - just give the letter(s)
 
 Be honest about limitations and suggest verification methods if needed."""
         }
@@ -198,17 +216,19 @@ Step 1: [Clear description]
 Explanation: [Why this step is necessary and how it works]
 Formula (if applicable): [Mathematical formula used]
 
-Step 2: [Clear description]
+Step 2: [Clear description]  
 Explanation: [Why this step is necessary and how it works]
 Formula (if applicable): [Mathematical formula used]
 
 [Continue for all steps...]
 
-FINAL ANSWER: For multiple choice questions, provide ONLY the letter of the correct option (e.g., A, B, C, D, or BCD if multiple are correct). For numerical questions, provide ONLY the final number.
+FINAL ANSWER: [For multiple choice questions (A, B, C, D), provide ONLY the letter. For other questions, provide the complete answer]
 
 CONFIDENCE: [Your confidence level from 0.0 to 1.0]
 
 EDUCATIONAL NOTES: [Additional tips, common mistakes to avoid, or related concepts]
+
+IMPORTANT: If this is a multiple choice question with options (A), (B), (C), (D), your FINAL ANSWER must be exactly one letter: A, B, C, or D. Do not include explanations in the final answer section.
 """
         
         if source_type == SourceType.KNOWLEDGE_BASE:
@@ -362,62 +382,137 @@ Relevance: {result.relevance_score}
             return self._create_error_solution(question, str(e), source_type, subject)
 
     def _extract_answer_from_text(self, solution_text: str, question: str) -> str:
-        """Try to extract the final answer using multiple strategies"""
+        """Try to extract the final answer using multiple strategies - IMPROVED FOR MULTI-LETTER ANSWERS"""
         import re
         
-        # Strategy 1: Look for multiple choice patterns
+        # Strategy 1: Look for multiple choice patterns FIRST
         if self._is_multiple_choice_question(question):
-            # Look for explicit answer patterns
-            patterns = [
-                r'answer\s*:?\s*\(?([abcd])\)?',
-                r'option\s*:?\s*\(?([abcd])\)?', 
-                r'choice\s*:?\s*\(?([abcd])\)?',
-                r'the\s+answer\s+is\s*:?\s*\(?([abcd])\)?',
-                r'therefore\s*:?\s*\(?([abcd])\)?',
-                r'\b([abcd])\s*is\s+correct',
-                r'correct\s+answer\s*:?\s*\(?([abcd])\)?'
+            # ENHANCED: Patterns that can capture multi-letter answers like BCD, ACD
+            mc_patterns = [
+                # Single or multiple letters in parentheses: (A), (BCD), (A, B, C)
+                r'(?:answer|option|choice|therefore|result|conclusion)\s*:?\s*\(?([abcd,\s]+)\)?',
+                r'(?:the\s+)?(?:correct\s+)?answer\s+is\s*:?\s*\(?([abcd,\s]+)\)?',
+                r'options?\s*\(?([abcd,\s]+)\)?\s*(?:are?|is)\s*correct',
+                r'choose\s*:?\s*\(?([abcd,\s]+)\)?',
+                r'select\s*:?\s*\(?([abcd,\s]+)\)?',
+                # Multiple letters together: "BCD", "A, C, D", "B and C"
+                r'therefore[,.]?\s*\(?([abcd,\s]+)\)?',
+                r'thus[,.]?\s*\(?([abcd,\s]+)\)?',
+                r'hence[,.]?\s*\(?([abcd,\s]+)\)?'
             ]
             
-            for pattern in patterns:
-                match = re.search(pattern, solution_text.lower())
-                if match:
-                    return match.group(1).upper()
+            text_lower = solution_text.lower()
             
-            # Look for isolated letters in the last few sentences
-            sentences = solution_text.lower().split('.')
-            for sentence in sentences[-3:]:
-                isolated_letter = re.search(r'\b([abcd])\b', sentence.strip())
-                if isolated_letter:
-                    return isolated_letter.group(1).upper()
-        
-        # Strategy 2: Look for numerical answers
-        numerical_patterns = [
-            r'final\s+answer\s*:?\s*([^.\n]+)',
-            r'answer\s*:?\s*([^.\n]+)',
-            r'therefore\s*:?\s*([^.\n]+)',
-            r'result\s*:?\s*([^.\n]+)',
-            r'solution\s*:?\s*([^.\n]+)'
+            for pattern in mc_patterns:
+                matches = re.findall(pattern, text_lower)
+                if matches:
+                    # Take the last match and clean it up
+                    raw_answer = matches[-1].strip()
+                    cleaned_answer = self._clean_multiple_choice_answer(raw_answer)
+                    if cleaned_answer:
+                        return cleaned_answer
+            
+            # Strategy 1b: Look for patterns like "A, B, and C" or "options A, B, C"
+            multi_option_patterns = [
+                r'options?\s+([abcd](?:\s*[,&and]+\s*[abcd])*)',
+                r'answers?\s+([abcd](?:\s*[,&and]+\s*[abcd])*)',
+                r'choices?\s+([abcd](?:\s*[,&and]+\s*[abcd])*)',
+                r'([abcd])\s*[,&and]+\s*([abcd])(?:\s*[,&and]+\s*([abcd]))?(?:\s*[,&and]+\s*([abcd]))?'
+            ]
+            
+            for pattern in multi_option_patterns:
+                match = re.search(pattern, text_lower)
+                if match:
+                    if pattern.endswith('))?'): # The complex pattern
+                        # Extract all non-None groups
+                        letters = [g for g in match.groups() if g]
+                        if letters:
+                            return ''.join(letters).upper()
+                    else:
+                        raw_answer = match.group(1)
+                        cleaned_answer = self._clean_multiple_choice_answer(raw_answer)
+                        if cleaned_answer:
+                            return cleaned_answer
+            
+            # Strategy 1c: Look for consecutive letters like "BCD" in the text
+            consecutive_pattern = r'\b([abcd]{2,4})\b'
+            consecutive_matches = re.findall(consecutive_pattern, text_lower)
+            if consecutive_matches:
+                # Take the last occurrence
+                candidate = consecutive_matches[-1].upper()
+                # Verify it's a valid combination (all letters A-D)
+                if all(c in 'ABCD' for c in candidate):
+                    return candidate
+            
+            # Strategy 1d: Check end of solution for isolated letters
+            sentences = solution_text.split('.')
+            for sentence in sentences[-5:]:
+                sentence_clean = sentence.strip().lower()
+                # Look for single letters first
+                isolated_match = re.search(r'\b([abcd])\b', sentence_clean)
+                if isolated_match:
+                    return isolated_match.group(1).upper()
+    
+        # Strategy 2: Look for structured final answer patterns (for non-MC questions)
+        final_answer_patterns = [
+            r'final\s+answer\s*:?\s*([^.\n]+?)(?:\.|$)',
+            r'answer\s*:?\s*([^.\n]+?)(?:\.|$)', 
+            r'solution\s*:?\s*([^.\n]+?)(?:\.|$)',
+            r'result\s*:?\s*([^.\n]+?)(?:\.|$)',
+            r'therefore[,.]?\s*([^.\n]+?)(?:\.|$)',
+            r'thus[,.]?\s*([^.\n]+?)(?:\.|$)',
+            r'hence[,.]?\s*([^.\n]+?)(?:\.|$)'
         ]
         
-        for pattern in numerical_patterns:
-            match = re.search(pattern, solution_text.lower())
+        for pattern in final_answer_patterns:
+            match = re.search(pattern, solution_text, re.IGNORECASE | re.MULTILINE)
             if match:
                 answer = match.group(1).strip()
-                if answer and len(answer) < 100:  # Reasonable answer length
+                # Clean up the answer
+                answer = re.sub(r'^[:\-\s=]+', '', answer)
+                answer = re.sub(r'[.\s]+$', '', answer)
+                
+                # Skip if it looks like a step description
+                if any(skip_word in answer.lower() for skip_word in ['step', 'rewrite', 'find', 'calculate', 'express']):
+                    continue
+                
+                if answer and len(answer) < 100:
+                    # For multiple choice, try to extract letters from the answer
+                    if self._is_multiple_choice_question(question):
+                        cleaned_mc = self._clean_multiple_choice_answer(answer)
+                        if cleaned_mc:
+                            return cleaned_mc
                     return answer
         
-        # Strategy 3: Look at the end of the text for answers
-        last_lines = solution_text.strip().split('\n')[-3:]
-        for line in reversed(last_lines):
-            line = line.strip()
-            if line and len(line) < 50:  # Likely a final answer
-                # Clean up formatting
-                cleaned = re.sub(r'^[:\-\s]+', '', line)
-                if cleaned:
-                    return cleaned
+        # Fallback strategies...
+        if self._is_multiple_choice_question(question):
+            return "Unable to extract multiple choice answer"
+        else:
+            return "Unable to determine final answer"
+
+    def _clean_multiple_choice_answer(self, raw_answer: str) -> str:
+        """Clean and format multiple choice answer"""
+        if not raw_answer:
+            return ""
         
-        # Fallback
-        return "Unable to determine final answer from solution"
+        # Extract all letters A-D from the answer
+        letters = re.findall(r'[abcdABCD]', raw_answer)
+        if not letters:
+            return ""
+        
+        # Convert to uppercase and remove duplicates while preserving order
+        seen = set()
+        unique_letters = []
+        for letter in letters:
+            letter_upper = letter.upper()
+            if letter_upper not in seen and letter_upper in 'ABCD':
+                seen.add(letter_upper)
+                unique_letters.append(letter_upper)
+        
+        # Sort alphabetically for consistency (A, B, C, D order)
+        unique_letters.sort()
+        
+        return ''.join(unique_letters) if unique_letters else ""
 
     def _is_multiple_choice_question(self, question: str) -> bool:
         """Check if question is multiple choice"""

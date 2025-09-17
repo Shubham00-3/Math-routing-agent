@@ -120,7 +120,7 @@ async def run_benchmark():
     results = []
 
     # Process Each Question (testing with first 3 for detailed debugging)
-    for i, question_data in enumerate(math_questions[:3]): 
+    for i, question_data in enumerate(math_questions[:10]): 
         question_text = question_data.get('question', '')
         ground_truth_answer = question_data.get('gold', '')
 
