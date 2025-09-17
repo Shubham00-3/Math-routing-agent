@@ -32,7 +32,7 @@ class MathRoutingAgent:
         self.llm_service = MathLLMService()
         
         # Updated routing thresholds for better performance
-        self.kb_similarity_threshold = 0.7  # Lower threshold to trigger KB more often
+        self.kb_similarity_threshold = 0.5  # Lower threshold to trigger KB more often
         self.web_search_threshold = 0.5    # Lower threshold to trigger web search
         self.hybrid_threshold = 0.6        # Threshold for hybrid approach
         

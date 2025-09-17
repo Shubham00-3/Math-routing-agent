@@ -22,9 +22,9 @@ class DirectWebSearchService:
         
         if not self.tavily_api_key:
             logger.warning("⚠️ TAVILY_API_KEY not found - web search will be unavailable")
-            self.is_available = False
+            self._service_available = False
         else:
-            self.is_available = True
+            self._service_available = True
             logger.info("✅ Tavily web search initialized successfully")
 
     async def search_math_problems(
@@ -36,7 +36,7 @@ class DirectWebSearchService:
     ) -> List[SearchResult]:
         """Direct search using Tavily API - no subprocess needed"""
         
-        if not self.is_available:
+        if not self._service_available:
             logger.warning("🚫 Web search unavailable - missing API key")
             return []
 
@@ -341,7 +341,7 @@ class DirectWebSearchService:
 
     async def is_available(self) -> bool:
         """Check if web search is available"""
-        return self.is_available and bool(self.tavily_api_key)
+        return self._service_available and bool(self.tavily_api_key)
 
 # For backward compatibility, create an alias
 MCPWebSearchService = DirectWebSearchService

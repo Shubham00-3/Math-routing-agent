@@ -143,124 +143,63 @@ Be honest about limitations and suggest verification methods if needed."""
     async def generate_solution(
         self,
         question: str,
-        context_data: Dict[str, Any],
-        source_type: SourceType,
+        context: str = "",
+        source_type: SourceType = SourceType.STANDALONE,
         subject: Optional[QuestionType] = None
     ) -> SolutionResponse:
-        """Generate mathematical solution based on context and source type"""
+        """Generate mathematical solution with context support"""
         try:
-            start_time = time.time()
+            start_time = datetime.utcnow()
             
-            # Select appropriate system prompt
+            # Select appropriate system prompt based on source type
             system_prompt = self.system_prompts.get(source_type.value, self.system_prompts["standalone"])
             
-            # Create chat prompt
-            prompt_template = ChatPromptTemplate.from_messages([
-                SystemMessagePromptTemplate.from_template(system_prompt),
-                HumanMessagePromptTemplate.from_template(self._create_human_prompt(source_type))
-            ])
+            # Build the prompt with context if provided
+            if context and context.strip():
+                user_prompt = f"""
+                Context Information:
+                {context}
+                
+                Question: {question}
+                
+                Please provide a step-by-step solution using the context information provided above.
+                """
+            else:
+                user_prompt = f"""
+                Question: {question}
+                
+                Please provide a step-by-step mathematical solution.
+                """
             
-            # Prepare context
-            context_str = self._format_context(context_data, source_type)
+            # Generate solution using LLM
+            messages = [
+                SystemMessage(content=system_prompt),
+                HumanMessage(content=user_prompt)
+            ]
             
-            # Format prompt inputs
-            prompt_inputs = {
-                "question": question,
-                "context": context_str,
-                "subject": subject.value if subject else "general mathematics"
-            }
+            logger.info(f"🤖 Generating solution using {source_type.value} approach")
             
-            # Generate response using LLM
             if self.llm is None:
                 return self._create_error_solution(question, "LLM not initialized", source_type, subject)
+
+            response = await self.llm.ainvoke(messages)
+            solution_text = response.content
             
-            messages = prompt_template.format_prompt(**prompt_inputs).to_messages()
-            
-            # Use invoke instead of agenerate for newer langchain versions
-            try:
-                response = await self.llm.ainvoke(messages)
-                solution_text = response.content
-            except AttributeError:
-                # Fallback for older versions
-                response = self.llm.invoke(messages)
-                solution_text = response.content
-            
-            # Parse response into structured solution
-            parsed_solution = await self._parse_solution_response(
+            # Parse the response into structured format
+            solution = await self._parse_solution_response(
                 solution_text, question, source_type, subject
             )
             
             # Calculate processing time
-            processing_time = time.time() - start_time
-            parsed_solution.processing_time = processing_time
+            processing_time = (datetime.utcnow() - start_time).total_seconds()
+            solution.processing_time = processing_time
             
-            logger.info(f"Generated solution for question: {question[:50]}... in {processing_time:.2f}s")
-            return parsed_solution
+            logger.info(f"✅ Solution generated in {processing_time:.2f}s")
+            return solution
             
         except Exception as e:
-            logger.error(f"Error generating solution: {str(e)}")
+            logger.error(f"❌ Error generating solution: {str(e)}")
             return self._create_error_solution(question, str(e), source_type, subject)
-
-    def _create_human_prompt(self, source_type: SourceType) -> str:
-        """Create human prompt based on source type"""
-        base_prompt = """
-Question: {question}
-Subject: {subject}
-
-{context}
-
-Please provide a comprehensive step-by-step solution following this format:
-
-SOLUTION:
-Step 1: [Clear description]
-Explanation: [Why this step is necessary and how it works]
-Formula (if applicable): [Mathematical formula used]
-
-Step 2: [Clear description]
-Explanation: [Why this step is necessary and how it works]
-Formula (if applicable): [Mathematical formula used]
-
-[Continue for all steps...]
-
-FINAL ANSWER: For multiple choice questions with options (A), (B), (C), (D), your FINAL ANSWER must be ONLY ONE of the following: A, B, C, or D. If multiple options are correct, provide them as a single string (e.g., BCD, AD). For all other questions, provide the complete answer. Do not include any other text or explanation in the FINAL ANSWER section.
-
-CONFIDENCE: [Your confidence level from 0.0 to 1.0]
-
-EDUCATIONAL NOTES: [Additional tips, common mistakes to avoid, or related concepts]
-"""
-        return base_prompt
-
-    def _format_context(self, context_data: Dict[str, Any], source_type: SourceType) -> str:
-        """Format context data for LLM prompt"""
-        if source_type == SourceType.KNOWLEDGE_BASE:
-            kb_data = context_data.get("knowledge_base", {})
-            if kb_data:
-                return f"""
-KNOWLEDGE BASE SOLUTION:
-Question: {kb_data.get('question', '')}
-Answer: {kb_data.get('final_answer', '')}
-Confidence: {kb_data.get('confidence_score', 0.0)}
-"""
-            
-        elif source_type == SourceType.WEB_SEARCH:
-            search_results = context_data.get("search_results", [])
-            if search_results:
-                formatted_results = []
-                for i, result in enumerate(search_results[:3], 1):
-                    formatted_results.append(f"""
-SEARCH RESULT {i}:
-Title: {result.title}
-Content: {result.content[:500]}...
-Relevance: {result.relevance_score}
-""")
-                return "\n".join(formatted_results)
-            
-        elif source_type == SourceType.HYBRID:
-            kb_context = self._format_context(context_data, SourceType.KNOWLEDGE_BASE)
-            search_context = self._format_context(context_data, SourceType.WEB_SEARCH)
-            return f"{kb_context}\n\n{search_context}"
-            
-        return "No additional context provided."
 
     async def _parse_solution_response(
         self,
