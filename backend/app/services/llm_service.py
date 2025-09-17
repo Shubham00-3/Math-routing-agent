@@ -216,29 +216,19 @@ Step 1: [Clear description]
 Explanation: [Why this step is necessary and how it works]
 Formula (if applicable): [Mathematical formula used]
 
-Step 2: [Clear description]  
+Step 2: [Clear description]
 Explanation: [Why this step is necessary and how it works]
 Formula (if applicable): [Mathematical formula used]
 
 [Continue for all steps...]
 
-FINAL ANSWER: [For multiple choice questions (A, B, C, D), provide ONLY the letter. For other questions, provide the complete answer]
+FINAL ANSWER: For multiple choice questions with options (A), (B), (C), (D), your FINAL ANSWER must be ONLY ONE of the following: A, B, C, or D. If multiple options are correct, provide them as a single string (e.g., BCD, AD). For all other questions, provide the complete answer. Do not include any other text or explanation in the FINAL ANSWER section.
 
 CONFIDENCE: [Your confidence level from 0.0 to 1.0]
 
 EDUCATIONAL NOTES: [Additional tips, common mistakes to avoid, or related concepts]
-
-IMPORTANT: If this is a multiple choice question with options (A), (B), (C), (D), your FINAL ANSWER must be exactly one letter: A, B, C, or D. Do not include explanations in the final answer section.
 """
-        
-        if source_type == SourceType.KNOWLEDGE_BASE:
-            return base_prompt + "\nNote: Use the provided knowledge base solution as reference but enhance it for better student understanding."
-        elif source_type == SourceType.WEB_SEARCH:
-            return base_prompt + "\nNote: Synthesize the web search results to create the most accurate solution."
-        elif source_type == SourceType.HYBRID:
-            return base_prompt + "\nNote: Compare knowledge base and web search information to provide the best solution."
-        else:
-            return base_prompt + "\nNote: Solve using your mathematical knowledge, being clear about any assumptions."
+        return base_prompt
 
     def _format_context(self, context_data: Dict[str, Any], source_type: SourceType) -> str:
         """Format context data for LLM prompt"""
@@ -384,135 +374,30 @@ Relevance: {result.relevance_score}
     def _extract_answer_from_text(self, solution_text: str, question: str) -> str:
         """Try to extract the final answer using multiple strategies - IMPROVED FOR MULTI-LETTER ANSWERS"""
         import re
-        
-        # Strategy 1: Look for multiple choice patterns FIRST
+
+        # Strategy 1: Look for explicit "FINAL ANSWER:"
+        final_answer_match = re.search(r'FINAL ANSWER:\s*(.*)', solution_text, re.IGNORECASE | re.DOTALL)
+        if final_answer_match:
+            answer = final_answer_match.group(1).strip()
+            # Further clean up, remove confidence etc.
+            answer = answer.split('\n')[0].strip()
+            if answer:
+                return answer
+
+
+        # Strategy 2: Look for multiple choice patterns if the first strategy fails
         if self._is_multiple_choice_question(question):
-            # ENHANCED: Patterns that can capture multi-letter answers like BCD, ACD
+            # This pattern is more robust
             mc_patterns = [
-                # Single or multiple letters in parentheses: (A), (BCD), (A, B, C)
-                r'(?:answer|option|choice|therefore|result|conclusion)\s*:?\s*\(?([abcd,\s]+)\)?',
-                r'(?:the\s+)?(?:correct\s+)?answer\s+is\s*:?\s*\(?([abcd,\s]+)\)?',
-                r'options?\s*\(?([abcd,\s]+)\)?\s*(?:are?|is)\s*correct',
-                r'choose\s*:?\s*\(?([abcd,\s]+)\)?',
-                r'select\s*:?\s*\(?([abcd,\s]+)\)?',
-                # Multiple letters together: "BCD", "A, C, D", "B and C"
-                r'therefore[,.]?\s*\(?([abcd,\s]+)\)?',
-                r'thus[,.]?\s*\(?([abcd,\s]+)\)?',
-                r'hence[,.]?\s*\(?([abcd,\s]+)\)?'
+                r'(?:answer|option|choice|therefore|result|conclusion)\s*:?\s*\(?([A-D]{1,4})\)?',
             ]
-            
             text_lower = solution_text.lower()
-            
             for pattern in mc_patterns:
                 matches = re.findall(pattern, text_lower)
                 if matches:
-                    # Take the last match and clean it up
-                    raw_answer = matches[-1].strip()
-                    cleaned_answer = self._clean_multiple_choice_answer(raw_answer)
-                    if cleaned_answer:
-                        return cleaned_answer
-            
-            # Strategy 1b: Look for patterns like "A, B, and C" or "options A, B, C"
-            multi_option_patterns = [
-                r'options?\s+([abcd](?:\s*[,&and]+\s*[abcd])*)',
-                r'answers?\s+([abcd](?:\s*[,&and]+\s*[abcd])*)',
-                r'choices?\s+([abcd](?:\s*[,&and]+\s*[abcd])*)',
-                r'([abcd])\s*[,&and]+\s*([abcd])(?:\s*[,&and]+\s*([abcd]))?(?:\s*[,&and]+\s*([abcd]))?'
-            ]
-            
-            for pattern in multi_option_patterns:
-                match = re.search(pattern, text_lower)
-                if match:
-                    if pattern.endswith('))?'): # The complex pattern
-                        # Extract all non-None groups
-                        letters = [g for g in match.groups() if g]
-                        if letters:
-                            return ''.join(letters).upper()
-                    else:
-                        raw_answer = match.group(1)
-                        cleaned_answer = self._clean_multiple_choice_answer(raw_answer)
-                        if cleaned_answer:
-                            return cleaned_answer
-            
-            # Strategy 1c: Look for consecutive letters like "BCD" in the text
-            consecutive_pattern = r'\b([abcd]{2,4})\b'
-            consecutive_matches = re.findall(consecutive_pattern, text_lower)
-            if consecutive_matches:
-                # Take the last occurrence
-                candidate = consecutive_matches[-1].upper()
-                # Verify it's a valid combination (all letters A-D)
-                if all(c in 'ABCD' for c in candidate):
-                    return candidate
-            
-            # Strategy 1d: Check end of solution for isolated letters
-            sentences = solution_text.split('.')
-            for sentence in sentences[-5:]:
-                sentence_clean = sentence.strip().lower()
-                # Look for single letters first
-                isolated_match = re.search(r'\b([abcd])\b', sentence_clean)
-                if isolated_match:
-                    return isolated_match.group(1).upper()
-    
-        # Strategy 2: Look for structured final answer patterns (for non-MC questions)
-        final_answer_patterns = [
-            r'final\s+answer\s*:?\s*([^.\n]+?)(?:\.|$)',
-            r'answer\s*:?\s*([^.\n]+?)(?:\.|$)', 
-            r'solution\s*:?\s*([^.\n]+?)(?:\.|$)',
-            r'result\s*:?\s*([^.\n]+?)(?:\.|$)',
-            r'therefore[,.]?\s*([^.\n]+?)(?:\.|$)',
-            r'thus[,.]?\s*([^.\n]+?)(?:\.|$)',
-            r'hence[,.]?\s*([^.\n]+?)(?:\.|$)'
-        ]
-        
-        for pattern in final_answer_patterns:
-            match = re.search(pattern, solution_text, re.IGNORECASE | re.MULTILINE)
-            if match:
-                answer = match.group(1).strip()
-                # Clean up the answer
-                answer = re.sub(r'^[:\-\s=]+', '', answer)
-                answer = re.sub(r'[.\s]+$', '', answer)
-                
-                # Skip if it looks like a step description
-                if any(skip_word in answer.lower() for skip_word in ['step', 'rewrite', 'find', 'calculate', 'express']):
-                    continue
-                
-                if answer and len(answer) < 100:
-                    # For multiple choice, try to extract letters from the answer
-                    if self._is_multiple_choice_question(question):
-                        cleaned_mc = self._clean_multiple_choice_answer(answer)
-                        if cleaned_mc:
-                            return cleaned_mc
-                    return answer
-        
-        # Fallback strategies...
-        if self._is_multiple_choice_question(question):
-            return "Unable to extract multiple choice answer"
-        else:
-            return "Unable to determine final answer"
+                    return matches[-1].upper()
 
-    def _clean_multiple_choice_answer(self, raw_answer: str) -> str:
-        """Clean and format multiple choice answer"""
-        if not raw_answer:
-            return ""
-        
-        # Extract all letters A-D from the answer
-        letters = re.findall(r'[abcdABCD]', raw_answer)
-        if not letters:
-            return ""
-        
-        # Convert to uppercase and remove duplicates while preserving order
-        seen = set()
-        unique_letters = []
-        for letter in letters:
-            letter_upper = letter.upper()
-            if letter_upper not in seen and letter_upper in 'ABCD':
-                seen.add(letter_upper)
-                unique_letters.append(letter_upper)
-        
-        # Sort alphabetically for consistency (A, B, C, D order)
-        unique_letters.sort()
-        
-        return ''.join(unique_letters) if unique_letters else ""
+        return "Unable to determine final answer"
 
     def _is_multiple_choice_question(self, question: str) -> bool:
         """Check if question is multiple choice"""

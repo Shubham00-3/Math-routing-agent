@@ -5,6 +5,7 @@ from passlib.context import CryptContext
 from fastapi import HTTPException, status
 from pydantic import ValidationError
 import logging
+from app.core.config import settings  # Add this import or adjust path as needed
 
 logger = logging.getLogger(__name__)
 
