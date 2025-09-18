@@ -85,7 +85,7 @@ class JEEBenchmarkRunner:
         ]
         
         sample_file = Path(__file__).parent / "sample_questions.json"
-        with open(sample_file, 'w') as f:
+        with open(sample_file, 'w', encoding='utf-8') as f:
             json.dump(sample_questions, f, indent=2)
             
         return str(sample_file)
@@ -115,9 +115,9 @@ class JEEBenchmarkRunner:
                     
                     if result["is_correct"]:
                         correct_answers += 1
-                        logger.info(f"Result: ✅ CORRECT")
+                        logger.info("Result: ✅ CORRECT")
                     else:
-                        logger.info(f"Result: ❌ INCORRECT")
+                        logger.info("Result: ❌ INCORRECT")
                         
                     # Print debug info
                     self._print_debug_info(result)
@@ -151,7 +151,7 @@ class JEEBenchmarkRunner:
             self._save_results(summary)
             
             logger.info("Benchmark finished!")
-            logger.info(f"--- Benchmark Summary ---")
+            logger.info("--- Benchmark Summary ---")
             logger.info(f"Total Questions Processed: {total_questions}")
             logger.info(f"Correct Answers: {correct_answers}")
             logger.info(f"Accuracy: {accuracy:.2f}%")
@@ -362,8 +362,8 @@ def run():
         level=logging.INFO,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
         handlers=[
-            logging.StreamHandler(),
-            logging.FileHandler('benchmark.log')
+            logging.StreamHandler(sys.stdout),
+            logging.FileHandler('benchmark.log', encoding='utf-8')
         ]
     )
     
@@ -372,7 +372,7 @@ def run():
         runner = JEEBenchmarkRunner(questions_file=args.questions_file)
         results = asyncio.run(runner.run_benchmark(limit=args.limit))
         
-        print(f"\n🎯 BENCHMARK COMPLETE")
+        print("\n🎯 BENCHMARK COMPLETE")
         print(f"Accuracy: {results['accuracy']:.2f}%")
         print(f"Questions: {results['total_questions']}")
         print(f"Correct: {results['correct_answers']}")

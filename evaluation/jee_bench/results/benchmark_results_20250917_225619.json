@@ -38,11 +38,13 @@
       "is_correct": false,
       "confidence_score": 0.6400000000000001,
       "source": "standalone",
-      "steps_count": 1,
+      "steps_count": 3,
       "steps": [
-        "Solution analysis"
+        "Identify the function and its components.",
+        "Apply the power rule to each term separately.",
+        "Combine the derivatives of the individual terms to find the derivative of the entire function."
       ]
     }
   ],
-  "timestamp": "2025-09-17T17:30:00.739532"
+  "timestamp": "2025-09-17T17:26:19.366922"
 }

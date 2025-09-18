@@ -1,0 +1,28 @@
+[
+  {
+    "id": 1,
+    "question": "If x\u00b2 - 5x + 6 = 0, then the values of x are:",
+    "options": {
+      "A": "2, 3",
+      "B": "1, 6",
+      "C": "-2, -3",
+      "D": "2, -3"
+    },
+    "correct_answer": "A",
+    "subject": "algebra",
+    "difficulty": "medium"
+  },
+  {
+    "id": 2,
+    "question": "What is the derivative of x\u00b3 + 2x\u00b2?",
+    "options": {
+      "A": "3x\u00b2 + 4x",
+      "B": "3x\u00b2 + 2x",
+      "C": "x\u00b2 + 4x",
+      "D": "3x + 4"
+    },
+    "correct_answer": "A",
+    "subject": "calculus",
+    "difficulty": "medium"
+  }
+]
