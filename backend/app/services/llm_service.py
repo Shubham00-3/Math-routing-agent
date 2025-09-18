@@ -184,7 +184,7 @@ Be honest about limitations and suggest verification methods if needed."""
 
             response = await self.llm.ainvoke(messages)
             solution_text = response.content
-            
+            logger.info(f"🐛 RAW LLM RESPONSE: {solution_text}")
             # Parse the response into structured format
             solution = await self._parse_solution_response(
                 solution_text, question, source_type, subject
@@ -208,86 +208,105 @@ Be honest about limitations and suggest verification methods if needed."""
         source_type: SourceType,
         subject: Optional[QuestionType]
     ) -> SolutionResponse:
-        """Parse LLM response into structured SolutionResponse with improved answer extraction"""
+        """Parse LLM response into structured SolutionResponse"""
         try:
             steps = []
             final_answer = ""
             confidence_score = 0.8
             educational_notes = ""
             
-            # Split response into sections
-            sections = solution_text.split('\n\n')
+            # Enhanced step parsing patterns
+            step_patterns = [
+                r'###\s*Step\s+(\d+):\s*(.+?)(?=###|\n\n|$)',  # ### Step format
+                r'Step\s+(\d+):\s*(.+?)(?=Step|\n\n|$)',       # Regular Step format
+                r'(\d+)\.\s*(.+?)(?=\d+\.|$)',                # Numbered format
+            ]
             
-            # First pass - extract structured content
-            for section in sections:
-                section = section.strip()
-                
-                if section.upper().startswith('STEP'):
-                    # Parse step
-                    lines = section.split('\n')
-                    step_line = lines[0]
-                    
-                    # Extract step number and description
-                    import re
-                    step_match = re.search(r'Step\s+(\d+):\s*(.+)', step_line, re.IGNORECASE)
-                    if step_match:
-                        step_num = int(step_match.group(1))
-                        description = step_match.group(2)
-                        
-                        current_step = Step(
-                            step_number=step_num,
-                            description=description,
+            # Enhanced final answer patterns
+            final_answer_patterns = [
+                r'The final answer is:\s*(.+?)(?=\n|$)',
+                r'FINAL ANSWER:\s*(.+?)(?=\n|$)',
+                r'Therefore,?\s*(.+?)(?=\n|$)',
+                r'The solutions?\s+(?:are?|is):\s*(.+?)(?=\n|$)',
+                r'x\s*=\s*(.+?)(?=\n|$)',  # Direct x = format
+            ]
+            
+            # Parse steps using multiple patterns
+            for pattern in step_patterns:
+                matches = re.findall(pattern, solution_text, re.IGNORECASE | re.DOTALL)
+                if matches:
+                    for i, match in enumerate(matches, 1):
+                        if len(match) == 2:
+                            step_num_str, description = match
+                            try:
+                                step_num = int(step_num_str)
+                            except:
+                                step_num = i
+                            
+                            # Clean description
+                            description = description.strip().replace('\n', ' ')
+                            
+                            step = Step(
+                                step_number=step_num,
+                                description=description,
+                                explanation="",
+                                formula=None,
+                                visual_aid=None
+                            )
+                            steps.append(step)
+                    break  # Use first successful pattern
+            
+            # Parse final answer using multiple patterns
+            for pattern in final_answer_patterns:
+                match = re.search(pattern, solution_text, re.IGNORECASE | re.MULTILINE)
+                if match:
+                    final_answer = match.group(1).strip()
+                    break
+            
+            # Fallback: extract from last line if no pattern matched
+            if not final_answer:
+                lines = solution_text.strip().split('\n')
+                last_line = lines[-1].strip()
+                if any(keyword in last_line.lower() for keyword in ['answer', 'solution', 'x =']):
+                    final_answer = last_line
+            
+            # Extract confidence if present
+            confidence_match = re.search(r'confidence:?\s*(\d+\.?\d*)', solution_text, re.IGNORECASE)
+            if confidence_match:
+                try:
+                    confidence_score = float(confidence_match.group(1))
+                    if confidence_score > 1.0:
+                        confidence_score = confidence_score / 100.0
+                except:
+                    confidence_score = 0.8
+            
+            # Extract educational notes
+            edu_match = re.search(r'educational notes?:(.+?)(?=\n\n|$)', solution_text, re.IGNORECASE | re.DOTALL)
+            if edu_match:
+                educational_notes = edu_match.group(1).strip()
+            
+            # Create fallback step if no steps parsed
+            if not steps:
+                # Split content into logical steps
+                paragraphs = [p.strip() for p in solution_text.split('\n\n') if p.strip()]
+                for i, paragraph in enumerate(paragraphs[:4], 1):  # Max 4 steps
+                    if len(paragraph) > 20:  # Skip very short paragraphs
+                        steps.append(Step(
+                            step_number=i,
+                            description=paragraph[:200] + "..." if len(paragraph) > 200 else paragraph,
                             explanation="",
                             formula=None,
                             visual_aid=None
-                        )
-                        
-                        # Look for explanation and formula in following lines
-                        for line in lines[1:]:
-                            if line.lower().startswith('explanation:'):
-                                current_step.explanation = line[12:].strip()
-                            elif line.lower().startswith('formula:'):
-                                current_step.formula = line[8:].strip()
-                        
-                        steps.append(current_step)
-                
-                elif section.upper().startswith('FINAL ANSWER'):
-                    # FIXED: Better final answer extraction
-                    final_answer = section[12:].strip()
-                    # Remove leading colon and spaces
-                    if final_answer.startswith(':'):
-                        final_answer = final_answer[1:].strip()
-                
-                elif section.upper().startswith('CONFIDENCE'):
-                    try:
-                        import re
-                        conf_text = section[10:].strip()
-                        conf_match = re.search(r'(\d+\.?\d*)', conf_text)
-                        if conf_match:
-                            confidence_score = float(conf_match.group(1))
-                            if confidence_score > 1.0:
-                                confidence_score = confidence_score / 100.0
-                    except:
-                        confidence_score = 0.8
-                
-                elif section.upper().startswith('EDUCATIONAL NOTES'):
-                    educational_notes = section[17:].strip()
+                        ))
             
-            # IMPROVED: Second pass - try to extract answer if not found in structured format
-            if not final_answer or final_answer in ["", "Please see the solution steps above for the complete answer."]:
-                final_answer = self._extract_answer_from_text(solution_text, question)
-            
-            # Create fallback steps if none found
-            if not steps:
-                steps = [
-                    Step(
-                        step_number=1,
-                        description="Solution analysis",
-                        explanation=solution_text[:300] + "..." if len(solution_text) > 300 else solution_text,
-                        formula=None,
-                        visual_aid=None
-                    )
-                ]
+            # Fallback final answer if not found
+            if not final_answer:
+                # Look for x = pattern in the entire text
+                x_matches = re.findall(r'x\s*=\s*([^,\n]+)', solution_text, re.IGNORECASE)
+                if x_matches:
+                    final_answer = f"x = {', '.join(x_matches)}"
+                else:
+                    final_answer = "Please see the solution steps above for the complete answer."
             
             # Create solution response
             solution = SolutionResponse(
@@ -298,10 +317,11 @@ Be honest about limitations and suggest verification methods if needed."""
                 confidence_score=min(max(confidence_score, 0.0), 1.0),
                 source=source_type,
                 subject=subject or QuestionType.ALGEBRA,
-                difficulty_level=5,  # Default difficulty
+                difficulty_level=5,
                 processing_time=0.0,  # Will be set by caller
                 references=[],
-                created_at=datetime.utcnow()
+                created_at=datetime.utcnow(),
+                educational_notes=educational_notes
             )
             
             return solution
