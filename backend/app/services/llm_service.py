@@ -208,124 +208,78 @@ Be honest about limitations and suggest verification methods if needed."""
         source_type: SourceType,
         subject: Optional[QuestionType]
     ) -> SolutionResponse:
-        """Parse LLM response into structured SolutionResponse"""
+        """Parse LLM response into a structured SolutionResponse with explanations."""
         try:
             steps = []
             final_answer = ""
-            confidence_score = 0.8
-            educational_notes = ""
             
-            # Enhanced step parsing patterns
-            step_patterns = [
-                r'###\s*Step\s+(\d+):\s*(.+?)(?=###|\n\n|$)',  # ### Step format
-                r'Step\s+(\d+):\s*(.+?)(?=Step|\n\n|$)',       # Regular Step format
-                r'(\d+)\.\s*(.+?)(?=\d+\.|$)',                # Numbered format
-            ]
+            # Clean the text by removing markdown bolding
+            solution_text = solution_text.replace('**', '').strip()
+    
+            # Isolate the final answer first to prevent it from being parsed as a step
+            final_answer_keywords = ["Final Answer:", "FINAL ANSWER:", "Conclusion:"]
+            text_for_steps = solution_text
             
-            # Enhanced final answer patterns
-            final_answer_patterns = [
-                r'The final answer is:\s*(.+?)(?=\n|$)',
-                r'FINAL ANSWER:\s*(.+?)(?=\n|$)',
-                r'Therefore,?\s*(.+?)(?=\n|$)',
-                r'The solutions?\s+(?:are?|is):\s*(.+?)(?=\n|$)',
-                r'x\s*=\s*(.+?)(?=\n|$)',  # Direct x = format
-            ]
-            
-            # Parse steps using multiple patterns
-            for pattern in step_patterns:
-                matches = re.findall(pattern, solution_text, re.IGNORECASE | re.DOTALL)
-                if matches:
-                    for i, match in enumerate(matches, 1):
-                        if len(match) == 2:
-                            step_num_str, description = match
-                            try:
-                                step_num = int(step_num_str)
-                            except:
-                                step_num = i
-                            
-                            # Clean description
-                            description = description.strip().replace('\n', ' ')
-                            
-                            step = Step(
-                                step_number=step_num,
-                                description=description,
-                                explanation="",
-                                formula=None,
-                                visual_aid=None
-                            )
-                            steps.append(step)
-                    break  # Use first successful pattern
-            
-            # Parse final answer using multiple patterns
-            for pattern in final_answer_patterns:
-                match = re.search(pattern, solution_text, re.IGNORECASE | re.MULTILINE)
-                if match:
-                    final_answer = match.group(1).strip()
+            for keyword in final_answer_keywords:
+                if keyword in solution_text:
+                    parts = solution_text.split(keyword, 1)
+                    text_for_steps = parts[0]
+                    final_answer = parts[1].strip()
                     break
+    
+            # Use regex to split the text into steps. This pattern looks for "Step X:"
+            # and captures everything until the next "Step X:" or the end of the string.
+            step_chunks = re.split(r'(?=Step\s+\d+:)', text_for_steps, flags=re.IGNORECASE)
             
-            # Fallback: extract from last line if no pattern matched
+            step_num_counter = 1
+            for chunk in step_chunks:
+                chunk = chunk.strip()
+                if not chunk:
+                    continue
+    
+                # Extract the step description and explanation from the chunk
+                match = re.match(r'Step\s+\d+:\s*([^\n]+)\n?([\s\S]*)', chunk, re.IGNORECASE)
+                if match:
+                    description = match.group(1).strip()
+                    explanation = match.group(2).strip()
+                    
+                    # If there's no real explanation, use the description as the main content
+                    if not explanation:
+                        explanation = description
+                        description = f"Step {step_num_counter}" # Generic title
+    
+                    steps.append(Step(
+                        step_number=step_num_counter,
+                        description=description,
+                        explanation=explanation
+                    ))
+                    step_num_counter += 1
+    
+            # If after all that, the final answer is still empty, create a sensible default
             if not final_answer:
-                lines = solution_text.strip().split('\n')
-                last_line = lines[-1].strip()
-                if any(keyword in last_line.lower() for keyword in ['answer', 'solution', 'x =']):
-                    final_answer = last_line
-            
-            # Extract confidence if present
-            confidence_match = re.search(r'confidence:?\s*(\d+\.?\d*)', solution_text, re.IGNORECASE)
-            if confidence_match:
-                try:
-                    confidence_score = float(confidence_match.group(1))
-                    if confidence_score > 1.0:
-                        confidence_score = confidence_score / 100.0
-                except:
-                    confidence_score = 0.8
-            
-            # Extract educational notes
-            edu_match = re.search(r'educational notes?:(.+?)(?=\n\n|$)', solution_text, re.IGNORECASE | re.DOTALL)
-            if edu_match:
-                educational_notes = edu_match.group(1).strip()
-            
-            # Create fallback step if no steps parsed
-            if not steps:
-                # Split content into logical steps
-                paragraphs = [p.strip() for p in solution_text.split('\n\n') if p.strip()]
-                for i, paragraph in enumerate(paragraphs[:4], 1):  # Max 4 steps
-                    if len(paragraph) > 20:  # Skip very short paragraphs
-                        steps.append(Step(
-                            step_number=i,
-                            description=paragraph[:200] + "..." if len(paragraph) > 200 else paragraph,
-                            explanation="",
-                            formula=None,
-                            visual_aid=None
-                        ))
-            
-            # Fallback final answer if not found
-            if not final_answer:
-                # Look for x = pattern in the entire text
-                x_matches = re.findall(r'x\s*=\s*([^,\n]+)', solution_text, re.IGNORECASE)
-                if x_matches:
-                    final_answer = f"x = {', '.join(x_matches)}"
-                else:
-                    final_answer = "Please see the solution steps above for the complete answer."
-            
-            # Create solution response
-            solution = SolutionResponse(
+                final_answer = "The solution is detailed in the steps above."
+    
+            # If no steps were parsed at all, use the whole text as the first step's explanation
+            if not steps and solution_text:
+                steps.append(Step(
+                    step_number=1,
+                    description="Solution Analysis",
+                    explanation=solution_text
+                ))
+    
+            return SolutionResponse(
                 question=question,
                 solution_id=str(uuid.uuid4()),
                 steps=steps,
                 final_answer=final_answer,
-                confidence_score=min(max(confidence_score, 0.0), 1.0),
+                confidence_score=0.85,  # Adjusted default confidence
                 source=source_type,
                 subject=subject or QuestionType.ALGEBRA,
                 difficulty_level=5,
-                processing_time=0.0,  # Will be set by caller
-                references=[],
-                created_at=datetime.utcnow(),
-                educational_notes=educational_notes
+                processing_time=0.0,
+                created_at=datetime.utcnow()
             )
-            
-            return solution
-            
+    
         except Exception as e:
             logger.error(f"Error parsing solution response: {str(e)}")
             return self._create_error_solution(question, str(e), source_type, subject)
@@ -390,3 +344,4 @@ Be honest about limitations and suggest verification methods if needed."""
             processing_time=0.0,
             created_at=datetime.utcnow()
         )
+
