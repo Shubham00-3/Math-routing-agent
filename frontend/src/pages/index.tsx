@@ -114,7 +114,6 @@ const MathApp: React.FC = () => {
             <div className="space-y-6">
               <SolutionDisplay
                 solution={solution}
-                onRegenerate={handleRegenerate}
                 isRegenerating={isLoading}
               />
               
